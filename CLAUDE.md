@@ -41,6 +41,14 @@
 ./pageflow add-server http://100.91.155.104:5200 --name tago
 ```
 
+### 远程服务器 Xvfb 配置
+无 X Server 的服务器需要配置 DISPLAY 环境变量：
+```bash
+# 在 ~/.bash_profile 添加
+export DISPLAY=:99
+```
+确保 Xvfb 已运行在 :99 display，pageflow 会自动使用
+
 ## 数据提取
 
 ### Extraction 模板管理
