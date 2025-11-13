@@ -170,5 +170,31 @@ export class JobRoutes extends BaseRouteHandler {
         message: "Job config updated successfully",
       });
     });
+
+    app.patch("/api/jobs/:id/interval", async (req: Request, res: Response) => {
+      const id = req.params.id;
+      const job = this.jobManager.getJob(id);
+
+      if (!job) {
+        return res.status(404).json({ error: `Job ${id} not found` });
+      }
+
+      const interval = parseInt(req.body.interval, 10);
+
+      if (isNaN(interval) || interval <= 0) {
+        return res.status(400).json({ error: "Interval must be a positive number" });
+      }
+
+      await job.updateInterval(interval);
+
+      res.json({
+        id: job.id,
+        type: job.type,
+        name: job.name,
+        interval: job.interval,
+        enabled: job.enabled,
+        message: "Job interval updated successfully",
+      });
+    });
   }
 }

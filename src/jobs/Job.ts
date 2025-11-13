@@ -111,6 +111,26 @@ export abstract class Job {
     }
   }
 
+  async updateInterval(interval: number): Promise<void> {
+    if (interval <= 0) {
+      throw new Error("Interval must be a positive number");
+    }
+
+    const wasRunning = this.enabled;
+
+    if (wasRunning) {
+      await this.stop();
+    }
+
+    this.interval = interval;
+
+    await this.save();
+
+    if (wasRunning) {
+      await this.start();
+    }
+  }
+
   toJSON(): any {
     return {
       id: this.id,

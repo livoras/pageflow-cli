@@ -711,7 +711,7 @@ async function showStatus(): Promise<void> {
                 : "not yet";
               const intervalText = `${job.interval}s`;
 
-              console.error(`  \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`);
+              console.error(`  • \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`);
               console.error(`    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`);
               if (job.config?.webhookUrl) {
                 const webhookStats = `(\x1b[32m${job.webhookSuccessCount || 0} succeed\x1b[0m, \x1b[31m${job.webhookFailureCount || 0} failed\x1b[0m)`;
@@ -754,7 +754,7 @@ async function showStatus(): Promise<void> {
             const intervalText = `${job.interval}s`;
 
             console.error(
-              `  \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`,
+              `  • \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`,
             );
             console.error(
               `    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`,
@@ -2733,6 +2733,52 @@ Examples:
         console.error(`- Enabled: ${response.data.enabled}`);
         console.error(`\nUpdated config:`);
         console.log(JSON.stringify(response.data.config, null, 2));
+      } catch (error: any) {
+        if (error.response) {
+          console.error(
+            `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+          );
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  jobs
+    .command("interval <id> <interval>")
+    .description("Update job interval (in seconds)")
+    .option("--use <name>", "Use specific named instance")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ pageflow jobs interval abc123 120
+  $ pageflow jobs interval abc123 60 --use tago
+      `,
+    )
+    .action(async (id, intervalStr, options) => {
+      const instanceManager = new InstanceManager();
+      const { instance, apiEndpoint } = await findJobInstance(instanceManager, id, options.use);
+
+      const interval = parseInt(intervalStr, 10);
+      if (isNaN(interval) || interval <= 0) {
+        console.error("Error: Interval must be a positive number");
+        process.exit(1);
+      }
+
+      try {
+        const response = await axios.patch(`${apiEndpoint}/api/jobs/${id}/interval`, {
+          interval: interval,
+        });
+
+        console.error(`Job interval updated successfully`);
+        console.error(`- Instance: ${instance.name}`);
+        console.error(`- ID: ${response.data.id}`);
+        console.error(`- Type: ${response.data.type}`);
+        console.error(`- Name: ${response.data.name}`);
+        console.error(`- Interval: ${response.data.interval}s`);
+        console.error(`- Enabled: ${response.data.enabled}`);
       } catch (error: any) {
         if (error.response) {
           console.error(

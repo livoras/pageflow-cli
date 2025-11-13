@@ -84,9 +84,13 @@ export DISPLAY=:99
 ./pageflow extract <url> <extraction_id> --scrolls 5 --delay 1000
 
 # 创建定时提取任务（推荐：所有爬虫任务都用此方式）
-./pageflow extract <url> <extraction_id> --interval <minutes> [--webhook <url>] [--use <instance>]
-# 例：每 0.2 分钟提取一次百度搜索，结果发送到 webhook
-./pageflow extract "https://www.baidu.com/s?wd=test" 25 --interval 0.2 --webhook "http://localhost:8888/webhook" --use tago
+./pageflow extract --use <instance> --interval <minutes> --webhook <url> <url> <extraction_id>
+
+# 例1：每 0.2 分钟提取百度搜索，结果发送到 webhook
+./pageflow extract --use tago --interval 0.2 --webhook "http://localhost:8888/webhook" "https://www.baidu.com/s?wd=test" 25
+
+# 例2：每 10 分钟提取小红书帖子详情
+./pageflow extract --use tago --interval 10 --webhook "http://100.94.195.92:9999/test-webhook" "https://www.xiaohongshu.com/explore/68d10e8f00000000130047e5?xsec_token=xxx&xsec_source=pc_collect" 24
 
 # 停止定时任务
 ./pageflow extract --stop-job <number>
