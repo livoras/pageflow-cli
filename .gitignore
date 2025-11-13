@@ -1,0 +1,27 @@
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+screenshot.png
+**/.DS_Store
+.cache/
+.env
+downloads/
+dist/
+evals/**/public
+lib/dom/build/
+evals/public
+*.tgz
+evals/playground.ts
+tmp/
+eval-summary.json
+package-lock.json
+evals/deterministic/tests/BrowserContext/tmp-test.har
+lib/version.ts
+output/
+
+# Temporary files
+/last-page.html
+/test-page.html
+*.log

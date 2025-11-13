@@ -1,0 +1,99 @@
+{
+  "name": "pageflow-cli",
+  "version": "1.0.14",
+  "description": "Pageflow CLI - Browser automation and web scraping tool with multi-instance support",
+  "main": "./dist/src/index.js",
+  "module": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "bin": {
+    "pageflow": "dist/pageflow.js"
+  },
+  "scripts": {
+    "example": "pnpm --filter pagaflow-examples run start",
+    "format": "prettier --write .",
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write .",
+    "eslint": "eslint .",
+    "cache:clear": "rm -rf .cache",
+    "docs": "pnpm --filter pagaflow-docs run dev",
+    "evals": "tsx scripts/run-evals.ts",
+    "evals:help": "pnpm run evals -- help",
+    "evals:man": "pnpm run evals -- man",
+    "e2e": "pnpm run build && cd evals/deterministic && playwright test --config=e2e.playwright.config.ts",
+    "e2e:bb": "pnpm run build && cd evals/deterministic && playwright test --config=bb.playwright.config.ts",
+    "e2e:local": "pnpm run build && cd evals/deterministic && playwright test --config=local.playwright.config.ts",
+    "build-cli": "tsup bin/pageflow.ts bin/start-server.ts --format cjs",
+    "build": "pnpm run build-cli",
+    "build:full": "pnpm run lint && pnpm run build",
+    "prepublishOnly": "pnpm run build",
+    "postinstall": "playwright install chromium",
+    "lint": "pnpm run prettier:fix && pnpm run eslint",
+    "release": "pnpm run build && changeset publish",
+    "release-canary": "pnpm run build && changeset version --snapshot && changeset publish --tag alpha",
+    "server": "tsx bin/start-server.ts",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "files": [
+    "dist/**",
+    "src/**"
+  ],
+  "keywords": [
+    "cli",
+    "web-scraping",
+    "browser-automation",
+    "playwright",
+    "data-extraction",
+    "web-crawler"
+  ],
+  "author": "djh",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^20.11.30",
+    "@types/node-fetch": "^2.6.13",
+    "@types/uuid": "^10.0.0",
+    "jsdom": "^26.1.0",
+    "node-fetch": "^3.3.2",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.5.0",
+    "tsx": "^4.10.5",
+    "typescript": "^5.2.2"
+  },
+  "peerDependencies": {
+    "zod": ">=3.25.0 <4.1.0"
+  },
+  "dependencies": {
+    "@types/cheerio": "^1.0.0",
+    "@types/ws": "^8.18.1",
+    "axios": "^1.11.0",
+    "cheerio": "^1.1.2",
+    "commander": "^14.0.2",
+    "cron-parser": "^5.4.0",
+    "devtools-protocol": "^0.0.1464554",
+    "express": "^5.1.0",
+    "playwright": "^1.52.0",
+    "uuid": "^11.1.0",
+    "vm2": "^3.9.19",
+    "ws": "^8.18.3",
+    "xtor": "^0.1.0"
+  },
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "lib": "lib"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/djh/pageflow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/djh/pageflow/issues"
+  },
+  "homepage": "https://github.com/djh/pageflow#readme",
+  "overrides": {
+    "whatwg-url": "^14.0.0"
+  },
+  "packageManager": "pnpm@9.15.0+sha512.76e2379760a4328ec4415815bcd6628dee727af3779aaa4c914e3944156c4299921a89f976381ee107d41f12cfa4b66681ca9c718f0668fa0831ed4c6d8ba56c"
+}

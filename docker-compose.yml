@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  pageflow-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pageflow-backend
+    ports:
+      - "8006:3100"
+    environment:
+      - PORT=3100
+      - SCREENSHOT=true
+      - CDP_ENDPOINT=${CDP_ENDPOINT}
+      - PAGEFLOW_AUTH_USER=${PAGEFLOW_AUTH_USER:-admin}
+      - PAGEFLOW_AUTH_PASS=${PAGEFLOW_AUTH_PASS:-pagaflow}
+      - DB_PATH=/data
+    volumes:
+      # Data persistence - database
+      - ${HOME}/.pageflow:/data
+      # User data - Chrome profile
+      - ${HOME}/.simple-page-server/user-data:/root/.simple-page-server/user-data
+      # Recordings data - screenshots and files
+      - ${HOME}/.pageflow/recordings:/tmp/simplepage
+    extra_hosts:
+      # Allow container to access host's localhost
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3100/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pageflow-network
+
+  pageflow-frontend:
+    build:
+      context: ./simple-page-viewer
+      dockerfile: Dockerfile
+    container_name: pageflow-frontend
+    ports:
+      - "8007:3102"
+    environment:
+      - PORT=3102
+      - NODE_ENV=production
+      - BACKEND_URL=http://pageflow-backend:3100
+    depends_on:
+      pageflow-backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pageflow-network
+
+networks:
+  pageflow-network:
+    driver: bridge
+
+volumes:
+  pageflow-data:
+    driver: local

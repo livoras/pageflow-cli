@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Pageflow CLI wrapper script
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Execute the compiled CLI using node
+node "$SCRIPT_DIR/dist/pageflow.js" "$@"
