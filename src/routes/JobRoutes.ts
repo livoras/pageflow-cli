@@ -137,5 +137,32 @@ export class JobRoutes extends BaseRouteHandler {
         message: "Job deleted successfully",
       });
     });
+
+    app.patch("/api/jobs/:id/config", async (req: Request, res: Response) => {
+      const id = req.params.id;
+      const job = this.jobManager.getJob(id);
+
+      if (!job) {
+        return res.status(404).json({ error: `Job ${id} not found` });
+      }
+
+      const key = RequestValidator.requireString(req.body.key, "Config key");
+      const value = req.body.value;
+
+      if (value === undefined) {
+        return res.status(400).json({ error: "Config value is required" });
+      }
+
+      await job.updateConfig(key, value);
+
+      res.json({
+        id: job.id,
+        type: job.type,
+        name: job.name,
+        config: job.config,
+        enabled: job.enabled,
+        message: "Job config updated successfully",
+      });
+    });
   }
 }

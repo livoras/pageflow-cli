@@ -79,6 +79,32 @@ export abstract class Job {
     await this.storage.delete(this.id);
   }
 
+  async updateConfig(key: string, value: any): Promise<void> {
+    const wasRunning = this.enabled;
+
+    if (wasRunning) {
+      await this.stop();
+    }
+
+    const keys = key.split(".");
+    let target: any = this.config;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!(keys[i] in target)) {
+        target[keys[i]] = {};
+      }
+      target = target[keys[i]];
+    }
+
+    target[keys[keys.length - 1]] = value;
+
+    await this.save();
+
+    if (wasRunning) {
+      await this.start();
+    }
+  }
+
   toJSON(): any {
     return {
       id: this.id,

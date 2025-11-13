@@ -1989,12 +1989,43 @@ Output Format:
           process.exit(1);
         }
       } else {
-        // Use extraction_id
+        // Use extraction_id - need to load template file
         const extractId =
           typeof extractionId === "number"
             ? extractionId
             : parseInt(extractionId, 10);
-        extractionConfig = { extractionId: extractId };
+
+        const templatePath = path.join(
+          os.homedir(),
+          ".pageflow",
+          "extractions",
+          `${extractId}.json`,
+        );
+
+        if (!fs.existsSync(templatePath)) {
+          console.error(`Error: Extraction template ${extractId} does not exist`);
+          console.error(`Path: ${templatePath}`);
+          process.exit(1);
+        }
+
+        try {
+          const templateContent = fs.readFileSync(templatePath, "utf-8");
+          const templateData = JSON.parse(templateContent);
+
+          if (!templateData.schema) {
+            console.error(`Error: Template ${extractId} missing schema field`);
+            process.exit(1);
+          }
+
+          extractionConfig = {
+            schema: templateData.schema,
+            strategy: templateData.strategy || null,
+            templateName: templateData.name || `Template ${extractId}`,
+          };
+        } catch (error: any) {
+          console.error(`Error: Failed to load template ${extractId} - ${error.message}`);
+          process.exit(1);
+        }
       }
 
       // Handle --interval option (start background job)
@@ -2012,7 +2043,7 @@ Output Format:
               url,
               scrolls,
               delay,
-              extraction: extractionConfig.schema ? extractionConfig : { schema: extractionConfig },
+              extraction: extractionConfig,
               webhookUrl: options.webhook,
             },
             interval: intervalSeconds,
@@ -2642,6 +2673,58 @@ Examples:
         console.error(`Job deleted successfully`);
         console.error(`- Instance: ${instance.name}`);
         console.error(`- ID: ${id}`);
+      } catch (error: any) {
+        if (error.response) {
+          console.error(
+            `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+          );
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  jobs
+    .command("config <id>")
+    .description("Update job configuration")
+    .requiredOption("--key <key>", "Configuration key to update (use dot notation for nested keys)")
+    .requiredOption("--value <value>", "New value (JSON string for complex values)")
+    .option("--use <name>", "Use specific named instance")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ pageflow jobs config abc123 --key targetUrl --value "http://localhost:9999"
+  $ pageflow jobs config abc123 --key domain --value "example.com"
+  $ pageflow jobs config abc123 --key extraction.schema --value '{"title":"h1"}'
+      `,
+    )
+    .action(async (id, options) => {
+      const instanceManager = new InstanceManager();
+      const { instance, apiEndpoint } = await findJobInstance(instanceManager, id, options.use);
+
+      let value = options.value;
+      try {
+        value = JSON.parse(options.value);
+      } catch {
+        // Keep as string if not valid JSON
+      }
+
+      try {
+        const response = await axios.patch(`${apiEndpoint}/api/jobs/${id}/config`, {
+          key: options.key,
+          value: value,
+        });
+
+        console.error(`Job config updated successfully`);
+        console.error(`- Instance: ${instance.name}`);
+        console.error(`- ID: ${response.data.id}`);
+        console.error(`- Type: ${response.data.type}`);
+        console.error(`- Name: ${response.data.name}`);
+        console.error(`- Enabled: ${response.data.enabled}`);
+        console.error(`\nUpdated config:`);
+        console.log(JSON.stringify(response.data.config, null, 2));
       } catch (error: any) {
         if (error.response) {
           console.error(
