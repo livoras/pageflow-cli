@@ -86,12 +86,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/djh/pageflow.git"
+    "url": "git+https://github.com/livoras/pageflow-cli.git"
   },
   "bugs": {
-    "url": "https://github.com/djh/pageflow/issues"
+    "url": "https://github.com/livoras/pageflow-cli/issues"
   },
-  "homepage": "https://github.com/djh/pageflow#readme",
+  "homepage": "https://github.com/livoras/pageflow-cli#readme",
   "overrides": {
     "whatwg-url": "^14.0.0"
   },
