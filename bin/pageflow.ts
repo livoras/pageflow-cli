@@ -714,7 +714,7 @@ async function showStatus(): Promise<void> {
               console.error(`  \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`);
               console.error(`    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`);
               if (job.config?.webhookUrl) {
-                console.error(`    Webhook: ${job.config.webhookUrl}`);
+                console.error(`    \x1b[4mWebhook: ${job.config.webhookUrl}\x1b[0m`);
               }
             });
           }
@@ -759,7 +759,7 @@ async function showStatus(): Promise<void> {
               `    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`,
             );
             if (job.config?.webhookUrl) {
-              console.error(`    Webhook: ${job.config.webhookUrl}`);
+              console.error(`    \x1b[4mWebhook: ${job.config.webhookUrl}\x1b[0m`);
             }
           });
         }
