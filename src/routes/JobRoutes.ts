@@ -42,6 +42,8 @@ export class JobRoutes extends BaseRouteHandler {
         createdAt: job.createdAt,
         lastRunAt: job.lastRunAt,
         runCount: job.runCount,
+        webhookSuccessCount: job.webhookSuccessCount,
+        webhookFailureCount: job.webhookFailureCount,
       });
     });
 
@@ -64,6 +66,8 @@ export class JobRoutes extends BaseRouteHandler {
           createdAt: job.createdAt,
           lastRunAt: job.lastRunAt,
           runCount: job.runCount,
+          webhookSuccessCount: job.webhookSuccessCount,
+          webhookFailureCount: job.webhookFailureCount,
         })),
       });
     });
@@ -86,6 +90,8 @@ export class JobRoutes extends BaseRouteHandler {
         createdAt: job.createdAt,
         lastRunAt: job.lastRunAt,
         runCount: job.runCount,
+        webhookSuccessCount: job.webhookSuccessCount,
+        webhookFailureCount: job.webhookFailureCount,
       });
     });
 
