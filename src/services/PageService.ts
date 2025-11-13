@@ -5,15 +5,6 @@ import { SimplePage } from "../SimplePage";
 import { BrowserContext } from "playwright";
 import { v4 as uuid } from "uuid";
 
-interface AutoSyncTask {
-  targetUrl: string;
-  domain: string;
-  interval: number;
-  timer: NodeJS.Timer;
-  startedAt: Date;
-  lastSyncAt: Date | null;
-}
-
 export class PageService {
   private stateManager: StateManager;
   private serverService: ServerService;
@@ -23,7 +14,6 @@ export class PageService {
   private reinitContextCallback?: () => Promise<BrowserContext>;
   private ensureBrowserCallback?: () => Promise<void>;
   private managementPageId: string | null = null;
-  private autoSyncTasks: Map<string, AutoSyncTask> = new Map();
 
   constructor(
     stateManager: StateManager,
@@ -176,116 +166,4 @@ export class PageService {
     this.stateManager.deletePage(pageId);
   }
 
-  /**
-   * Start automatic cookie sync to target server
-   */
-  async startAutoSync(
-    targetUrl: string,
-    domain: string = "all",
-    interval: number = 15,
-  ): Promise<void> {
-    const taskKey = `${targetUrl}:${domain}`;
-
-    if (this.autoSyncTasks.has(taskKey)) {
-      throw new Error(
-        `Auto-sync task already exists for ${targetUrl} (domain: ${domain})`,
-      );
-    }
-
-    const axios = (await import("axios")).default;
-
-    const syncFunction = async () => {
-      try {
-        const context = await this.getContext();
-        const allCookies = await context.cookies();
-
-        let cookies = allCookies;
-        if (domain && domain !== "all") {
-          cookies = allCookies.filter(
-            (c) =>
-              c.domain.includes(domain) ||
-              domain.includes(c.domain.replace(/^\./, "")),
-          );
-        }
-
-        if (cookies.length > 0) {
-          await axios.post(
-            `${targetUrl}/api/cookies`,
-            { cookies },
-            { timeout: 10000 },
-          );
-          console.log(
-            `[AutoSync] Synced ${cookies.length} cookies to ${targetUrl} (domain: ${domain})`,
-          );
-
-          const task = this.autoSyncTasks.get(taskKey);
-          if (task) {
-            task.lastSyncAt = new Date();
-          }
-        }
-      } catch (error: any) {
-        console.error(
-          `[AutoSync] Error syncing cookies to ${targetUrl}:`,
-          error.message,
-        );
-      }
-    };
-
-    const timer = setInterval(syncFunction, interval * 1000);
-
-    this.autoSyncTasks.set(taskKey, {
-      targetUrl,
-      domain,
-      interval,
-      timer,
-      startedAt: new Date(),
-      lastSyncAt: null,
-    });
-
-    console.log(
-      `[PageService] Started auto-sync to ${targetUrl} (domain: ${domain}, interval: ${interval}s)`,
-    );
-
-    await syncFunction();
-  }
-
-  /**
-   * Stop automatic cookie sync
-   */
-  stopAutoSync(targetUrl: string, domain: string = "all"): void {
-    const taskKey = `${targetUrl}:${domain}`;
-    const task = this.autoSyncTasks.get(taskKey);
-
-    if (!task) {
-      throw new Error(
-        `Auto-sync task not found for ${targetUrl} (domain: ${domain})`,
-      );
-    }
-
-    clearInterval(task.timer);
-    this.autoSyncTasks.delete(taskKey);
-
-    console.log(
-      `[PageService] Stopped auto-sync to ${targetUrl} (domain: ${domain})`,
-    );
-  }
-
-  /**
-   * Get all active auto-sync tasks
-   */
-  getAutoSyncStatus(): Array<{
-    targetUrl: string;
-    domain: string;
-    interval: number;
-    startedAt: Date;
-    lastSyncAt: Date | null;
-  }> {
-    return Array.from(this.autoSyncTasks.values()).map((task) => ({
-      targetUrl: task.targetUrl,
-      domain: task.domain,
-      interval: task.interval,
-      startedAt: task.startedAt,
-      lastSyncAt: task.lastSyncAt,
-    }));
-  }
 }

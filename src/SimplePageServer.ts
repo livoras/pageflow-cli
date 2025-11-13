@@ -11,7 +11,9 @@ import { RouteRegistry } from "./utils/RouteRegistry";
 import { HealthRoutes } from "./routes/HealthRoutes";
 import { PageRoutes } from "./routes/PageRoutes";
 import { ExtractionRoutes } from "./routes/ExtractionRoutes";
+import { JobRoutes } from "./routes/JobRoutes";
 import { ServerService } from "./services/ServerService";
+import { JobManager } from "./jobs/JobManager";
 
 export class SimplePageServer {
   private app: express.Application;
@@ -26,12 +28,16 @@ export class SimplePageServer {
   private routeRegistry: RouteRegistry;
   private serverServiceInstance: ServerService;
   private pageServiceInstance: PageService;
+  private jobManager: JobManager;
+  private instanceName: string;
 
   constructor(private port: number = parseInt(process.env.PORT || "3100")) {
     this.headless = process.env.HEADLESS === "true";
     this.userDataDir =
       process.env.USER_DATA_DIR ||
       path.join(os.homedir(), ".simple-page-server", "user-data");
+
+    this.instanceName = process.env.INSTANCE_NAME || "default";
 
     this.app = express();
     this.app.use(express.json());
@@ -43,6 +49,11 @@ export class SimplePageServer {
     this.pageServiceInstance = new PageService(
       this.stateManager,
       this.serverServiceInstance,
+    );
+    this.jobManager = new JobManager(
+      this.instanceName,
+      this.stateManager,
+      this.pageServiceInstance,
     );
 
     // Register route handlers
@@ -61,12 +72,22 @@ export class SimplePageServer {
         this.pageServiceInstance,
       ),
     );
+    this.routeRegistry.addHandler(
+      new JobRoutes(
+        this.stateManager,
+        this.jobManager,
+      ),
+    );
 
     this.registerRoutes();
   }
 
   private registerRoutes() {
     this.routeRegistry.registerAllRoutes(this.app);
+  }
+
+  getJobManager(): JobManager {
+    return this.jobManager;
   }
 
   async start() {
@@ -81,6 +102,9 @@ export class SimplePageServer {
     this.pageServiceInstance.setEnsureBrowserCallback(async () => {
       await this.ensureBrowserInitialized();
     });
+
+    // Initialize JobManager and restore saved jobs
+    await this.jobManager.initialize();
 
     // Start HTTP server
     this.httpServer = this.app.listen(this.port, () => {

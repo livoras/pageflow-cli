@@ -6,6 +6,7 @@ import { PageService } from "../services/PageService";
 
 export class ExtractionRoutes extends BaseRouteHandler {
   private extractionService: ExtractionService;
+  private pageService: PageService;
 
   constructor(
     stateManager: StateManager,
@@ -16,6 +17,7 @@ export class ExtractionRoutes extends BaseRouteHandler {
       stateManager,
       pageService,
     );
+    this.pageService = pageService;
   }
 
   registerRoutes(app: Application): void {

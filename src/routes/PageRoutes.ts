@@ -168,54 +168,5 @@ export class PageRoutes extends BaseRouteHandler {
         this.handleError(res, error, "Error pushing cookies");
       }
     });
-
-    // Start auto-sync
-    app.post("/api/cookies/auto-sync/start", async (req: Request, res: Response) => {
-      try {
-        const targetUrl = RequestValidator.requireString(req.body.targetUrl, "targetUrl");
-        const domain = req.body.domain || "all";
-        const interval = req.body.interval || 15;
-
-        await this.pageService.startAutoSync(targetUrl, domain, interval);
-
-        ResponseFormatter.success(res, {
-          message: `Auto-sync started to ${targetUrl}`,
-          targetUrl,
-          domain,
-          interval,
-        });
-      } catch (error: any) {
-        this.handleError(res, error, "Error starting auto-sync");
-      }
-    });
-
-    // Stop auto-sync
-    app.post("/api/cookies/auto-sync/stop", async (req: Request, res: Response) => {
-      try {
-        const targetUrl = RequestValidator.requireString(req.body.targetUrl, "targetUrl");
-        const domain = req.body.domain || "all";
-
-        this.pageService.stopAutoSync(targetUrl, domain);
-
-        ResponseFormatter.success(res, {
-          message: `Auto-sync stopped for ${targetUrl}`,
-          targetUrl,
-          domain,
-        });
-      } catch (error: any) {
-        this.handleError(res, error, "Error stopping auto-sync");
-      }
-    });
-
-    // Get auto-sync status
-    app.get("/api/cookies/auto-sync/status", async (req: Request, res: Response) => {
-      try {
-        const tasks = this.pageService.getAutoSyncStatus();
-
-        ResponseFormatter.success(res, { tasks });
-      } catch (error: any) {
-        this.handleError(res, error, "Error getting auto-sync status");
-      }
-    });
   }
 }

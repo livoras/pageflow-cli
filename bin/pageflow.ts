@@ -278,6 +278,7 @@ async function startServer(options: {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PORT: "0", // Will be updated after instance is registered
+    INSTANCE_NAME: instanceName,
     HEADLESS: options.headless ? "true" : "false",
   };
 
@@ -307,6 +308,7 @@ async function startServer(options: {
   const updatedEnv: NodeJS.ProcessEnv = {
     ...process.env,
     PORT: String(port),
+    INSTANCE_NAME: instanceName,
     USER_DATA_DIR: userDataDir,
     HEADLESS: options.headless ? "true" : "false",
   };
@@ -641,6 +643,13 @@ async function showStatus(): Promise<void> {
     return;
   }
 
+  // Sort instances: default first, then others alphabetically
+  instances.sort((a, b) => {
+    if (a.name === "default") return -1;
+    if (b.name === "default") return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   console.error(`Pageflow Instance Status (Total: ${instances.length}):\n`);
 
   for (const instance of instances) {
@@ -684,49 +693,33 @@ async function showStatus(): Promise<void> {
         console.error(`- \x1b[4mCDP: ${cdpEndpoint}\x1b[0m [${healthMark}]`);
       }
 
-      // Show auto-sync tasks if instance is running
+      // Show jobs if instance is running
       if (isRunning) {
         try {
           const response = await axios.get(
-            `http://localhost:${instance.port}/api/cookies/auto-sync/status`,
+            `http://localhost:${instance.port}/api/jobs`,
             { timeout: 2000 },
           );
-          const tasks = response.data.tasks;
-          if (tasks && tasks.length > 0) {
-            console.error(`- Auto-sync cookies tasks:`);
+          const jobs = response.data.jobs;
+          if (jobs && jobs.length > 0) {
+            console.error(`- Jobs:`);
 
-            // Calculate max widths for alignment
-            const taskData = tasks.map((task: any) => {
-              const targetName = instanceManager
-                .getAllInstances()
-                .find((i) => instanceManager.getInstanceUrl(i) === task.targetUrl)
-                ?.name || task.targetUrl;
-              const lastSyncText = task.lastSyncAt
-                ? formatTimeAgo(new Date(task.lastSyncAt))
-                : "never";
-              return {
-                targetName,
-                domain: task.domain,
-                interval: `${task.interval}s`,
-                lastSync: lastSyncText,
-              };
-            });
+            jobs.forEach((job: any) => {
+              const statusText = job.enabled ? "\x1b[1;32mRunning\x1b[0m" : "\x1b[1;90mStopped\x1b[0m";
+              const lastRunText = job.lastRunAt
+                ? formatTimeAgo(new Date(job.lastRunAt))
+                : "not yet";
+              const intervalText = `${job.interval}s`;
 
-            const maxTargetLen = Math.max(...taskData.map((t: any) => t.targetName.length));
-            const maxDomainLen = Math.max(...taskData.map((t: any) => t.domain.length));
-            const maxIntervalLen = Math.max(...taskData.map((t: any) => t.interval.length));
-
-            taskData.forEach((data: any, index: number) => {
-              console.error(
-                `  \x1b[1m#${index + 1}\x1b[0m To: ${data.targetName.padEnd(maxTargetLen)} | Domain: ${data.domain.padEnd(maxDomainLen)} | Interval: ${data.interval.padStart(maxIntervalLen)} | Last sync: ${data.lastSync}`,
-              );
+              console.error(`  \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`);
+              console.error(`    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`);
             });
           }
         } catch (error: any) {
           if (error.response?.status === 404) {
-            // Instance doesn't support auto-sync API (old version)
+            // Instance doesn't support jobs API (old version)
           } else {
-            console.error(`- Auto-sync cookies tasks: \x1b[1;91mError: ${error.message}\x1b[0m`);
+            console.error(`- Jobs: \x1b[1;91mError: ${error.message}\x1b[0m`);
           }
         }
       }
@@ -737,6 +730,40 @@ async function showStatus(): Promise<void> {
       console.error(
         `- Added at: ${new Date(instance.addedAt).toLocaleString("en-US")}`,
       );
+
+      // Show jobs for remote server
+      try {
+        const response = await axios.get(`${instance.url}/api/jobs`, {
+          timeout: 2000,
+        });
+        const jobs = response.data.jobs;
+        if (jobs && jobs.length > 0) {
+          console.error(`- Jobs:`);
+
+          jobs.forEach((job: any) => {
+            const statusText = job.enabled
+              ? "\x1b[1;32mRunning\x1b[0m"
+              : "\x1b[1;90mStopped\x1b[0m";
+            const lastRunText = job.lastRunAt
+              ? formatTimeAgo(new Date(job.lastRunAt))
+              : "not yet";
+            const intervalText = `${job.interval}s`;
+
+            console.error(
+              `  \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`,
+            );
+            console.error(
+              `    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`,
+            );
+          });
+        }
+      } catch (error: any) {
+        if (error.response?.status === 404) {
+          // Instance doesn't support jobs API (old version)
+        } else {
+          console.error(`- Jobs: \x1b[1;91mError: ${error.message}\x1b[0m`);
+        }
+      }
     }
 
     console.error("");
@@ -1527,7 +1554,7 @@ JSON Format:
     .option("--domain <domain>", "Domain to filter cookies (default: all)", "all")
     .option("--auto <mode>", "Auto sync mode: start or stop")
     .option("--interval <seconds>", "Auto sync interval in seconds (default: 15)", "15")
-    .option("--task <number>", "Task number to stop (use with --auto stop)")
+    .option("--task <number>", "Task number to stop (use with --auto stop)", parseInt)
     .addHelpText(
       "after",
       `
@@ -1550,7 +1577,7 @@ Examples:
   $ pageflow cookies sync --from default --to test --auto start
 
   # Start auto-sync with custom interval
-  $ pageflow cookies sync --from default --to test --domain xiaohongshu --auto start --interval 30
+  $ pageflow cookies sync --from default --to test --domain xiaohongshu.com --auto start --interval 30
 
   # Stop auto-sync by specifying target and domain
   $ pageflow cookies sync --from default --to test --auto stop
@@ -1567,7 +1594,7 @@ Examples:
       const domain = options.domain;
       const autoMode = options.auto;
       const interval = parseInt(options.interval, 10);
-      const taskNumber = options.task ? parseInt(options.task, 10) : null;
+      const taskNumber = options.task;
 
       // Validate from instance
       const fromInstance = instanceManager.getInstance(fromName);
@@ -1586,45 +1613,30 @@ Examples:
       const fromEndpoint = instanceManager.getInstanceUrl(fromInstance);
 
       // Handle stop by task number
-      if (autoMode === "stop" && taskNumber !== null) {
+      if (autoMode === "stop" && taskNumber) {
         try {
-          // Get auto-sync status
-          const statusResponse = await axios.get(
-            `${fromEndpoint}/api/cookies/auto-sync/status`,
-            { timeout: 2000 },
-          );
-          const tasks = statusResponse.data.tasks;
+          const response = await axios.get(`${fromEndpoint}/api/jobs?type=cookie-sync`, { timeout: 2000 });
+          const jobs = response.data.jobs;
 
-          if (!tasks || tasks.length === 0) {
-            console.error(`Error: No auto-sync tasks found`);
+          if (!jobs || jobs.length === 0) {
+            console.error(`Error: No cookie-sync jobs found`);
             process.exit(1);
           }
 
-          if (taskNumber < 1 || taskNumber > tasks.length) {
-            console.error(`Error: Task number ${taskNumber} is out of range (1-${tasks.length})`);
+          if (taskNumber < 1 || taskNumber > jobs.length) {
+            console.error(`Error: Task number ${taskNumber} is out of range (1-${jobs.length})`);
             process.exit(1);
           }
 
-          const task = tasks[taskNumber - 1];
-          console.error(
-            `Stopping auto-sync task #${taskNumber} (to: ${task.targetUrl}, domain: ${task.domain})...`,
-          );
+          const job = jobs[taskNumber - 1];
+          console.error(`Stopping cookie-sync job #${taskNumber} (name: ${job.name})...`);
 
-          const response = await axios.post(
-            `${fromEndpoint}/api/cookies/auto-sync/stop`,
-            {
-              targetUrl: task.targetUrl,
-              domain: task.domain,
-            },
-          );
-
-          console.error(response.data.message);
+          await axios.delete(`${fromEndpoint}/api/jobs/${job.id}`);
+          console.error(`Cookie-sync job stopped and deleted successfully`);
           return;
         } catch (error: any) {
           if (error.response) {
-            console.error(
-              `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
-            );
+            console.error(`Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`);
           } else {
             console.error(`Error: ${error.message}`);
           }
@@ -1633,57 +1645,65 @@ Examples:
       }
 
       // Validate to instance for other modes
-      if (!toName) {
+      if (!toName && autoMode !== "stop") {
         console.error(`Error: --to option is required`);
         process.exit(1);
       }
 
-      const toInstance = instanceManager.getInstance(toName);
-      if (!toInstance) {
-        console.error(`Error: Instance "${toName}" does not exist`);
-        process.exit(1);
-      }
-      if (toInstance.type === "local") {
-        const isRunning = await isProcessRunning(toInstance.pid);
-        if (!isRunning) {
-          console.error(`Error: Target instance "${toName}" is not running`);
+      let toEndpoint = "";
+      if (toName) {
+        const toInstance = instanceManager.getInstance(toName);
+        if (!toInstance) {
+          console.error(`Error: Instance "${toName}" does not exist`);
           process.exit(1);
         }
+        if (toInstance.type === "local") {
+          const isRunning = await isProcessRunning(toInstance.pid);
+          if (!isRunning) {
+            console.error(`Error: Target instance "${toName}" is not running`);
+            process.exit(1);
+          }
+        }
+        toEndpoint = instanceManager.getInstanceUrl(toInstance);
       }
-
-      const toEndpoint = instanceManager.getInstanceUrl(toInstance);
 
       try {
         // Handle auto-sync mode
         if (autoMode === "start") {
-          console.error(
-            `Starting auto-sync from "${fromName}" to "${toName}" (interval: ${interval}s, domain: ${domain})...`,
-          );
+          console.error(`Starting auto-sync from "${fromName}" to "${toName}" (interval: ${interval}s, domain: ${domain})...`);
 
-          const response = await axios.post(
-            `${fromEndpoint}/api/cookies/auto-sync/start`,
-            {
-              targetUrl: toEndpoint,
-              domain,
-              interval,
-            },
-          );
+          const jobName = `sync-${fromName}-to-${toName}-${domain}`;
+          const createResponse = await axios.post(`${fromEndpoint}/api/jobs`, {
+            type: "cookie-sync",
+            name: jobName,
+            config: { targetUrl: toEndpoint, domain },
+            interval,
+          });
 
-          console.error(response.data.message);
+          const job = createResponse.data;
+          await axios.post(`${fromEndpoint}/api/jobs/${job.id}/start`);
+
+          console.error(`Auto-sync started successfully`);
+          console.error(`- Job ID: ${job.id}`);
+          console.error(`- Job Name: ${job.name}`);
+          console.error(`Use 'pageflow jobs list' to view all jobs`);
         } else if (autoMode === "stop") {
-          console.error(
-            `Stopping auto-sync from "${fromName}" to "${toName}"...`,
+          console.error(`Stopping auto-sync from "${fromName}" to "${toName}"...`);
+
+          const response = await axios.get(`${fromEndpoint}/api/jobs?type=cookie-sync`, { timeout: 2000 });
+          const jobs = response.data.jobs;
+
+          const matchingJob = jobs.find((j: any) =>
+            j.config.targetUrl === toEndpoint && j.config.domain === domain
           );
 
-          const response = await axios.post(
-            `${fromEndpoint}/api/cookies/auto-sync/stop`,
-            {
-              targetUrl: toEndpoint,
-              domain,
-            },
-          );
+          if (!matchingJob) {
+            console.error(`Error: No matching auto-sync job found`);
+            process.exit(1);
+          }
 
-          console.error(response.data.message);
+          await axios.delete(`${fromEndpoint}/api/jobs/${matchingJob.id}`);
+          console.error(`Auto-sync stopped and deleted successfully`);
         } else {
           // One-time sync
           console.error(`Syncing cookies from "${fromName}" to "${toName}"...`);
@@ -1720,10 +1740,11 @@ Examples:
     .option("--delay <ms>", "Delay in milliseconds after each scroll", "0")
     .option("--use <name>", "Use specific named instance")
     .option("--random", "Randomly select a running instance")
-    .option("--interval <mins>", "Loop extraction interval in minutes", parseFloat)
+    .option("--interval <mins>", "Start background extraction job (interval in minutes)", parseFloat)
     .option("--save-html", "Save page HTML (url required, extraction_id as optional file path)")
     .option("--schema <file>", "Use custom extraction template file (JSON)")
     .option("--webhook <url>", "POST extraction result to webhook URL")
+    .option("--stop-job <number>", "Stop extraction job by number", parseInt)
     .addHelpText(
       "after",
       `
@@ -1752,9 +1773,10 @@ HTML Operations:
                         Usage: pageflow extract --save-html <url> [file]
                         Omit file to print to stdout
 
-Loop Extraction:
-  --interval <mins>     Repeat extraction every N minutes
+Background Extraction Jobs:
+  --interval <mins>     Start background extraction job (runs on server)
                         Useful for monitoring dynamic content
+  --stop-job <number>   Stop extraction job by number
 
 Examples:
   # Extract using template ID
@@ -1769,8 +1791,11 @@ Examples:
   # Use specific instance
   $ pageflow extract "https://example.com" 3 --use my-crawler
 
-  # Random instance with loop
-  $ pageflow extract "https://example.com" 3 --random --interval 5
+  # Start background extraction job (runs every 5 minutes)
+  $ pageflow extract "https://example.com" 3 --interval 5
+
+  # Stop extraction job #2
+  $ pageflow extract --stop-job 2
 
   # Save HTML for offline extraction
   $ pageflow extract --save-html "https://example.com" page.html
@@ -1802,6 +1827,48 @@ Output Format:
     )
     .action(async (url, extractionId, options) => {
       const instanceManager = new InstanceManager();
+
+      // Handle --stop-job option
+      if (options.stopJob) {
+        const jobNumber = options.stopJob;
+
+        const instance = instanceManager.getDefaultInstance();
+        if (!instance) {
+          console.error("Error: No running instances");
+          process.exit(1);
+        }
+
+        const apiEndpoint = instanceManager.getInstanceUrl(instance);
+
+        try {
+          const response = await axios.get(`${apiEndpoint}/api/jobs?type=extraction`, { timeout: 2000 });
+          const jobs = response.data.jobs;
+
+          if (!jobs || jobs.length === 0) {
+            console.error(`Error: No extraction jobs found`);
+            process.exit(1);
+          }
+
+          if (jobNumber < 1 || jobNumber > jobs.length) {
+            console.error(`Error: Job number ${jobNumber} is out of range (1-${jobs.length})`);
+            process.exit(1);
+          }
+
+          const job = jobs[jobNumber - 1];
+          console.error(`Stopping extraction job #${jobNumber} (URL: ${job.config.url})...`);
+
+          await axios.delete(`${apiEndpoint}/api/jobs/${job.id}`);
+          console.error(`Extraction job stopped and deleted successfully`);
+          return;
+        } catch (error: any) {
+          if (error.response) {
+            console.error(`Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`);
+          } else {
+            console.error(`Error: ${error.message}`);
+          }
+          process.exit(1);
+        }
+      }
 
       // Instance selection function
       const selectInstance = async (): Promise<{ endpoint: string; instanceName?: string }> => {
@@ -1930,73 +1997,60 @@ Output Format:
         extractionConfig = { extractionId: extractId };
       }
 
-      // Handle --interval option
+      // Handle --interval option (start background job)
       if (options.interval) {
-        const intervalSeconds = options.interval * 60;
-        console.error(`Starting loop extraction (interval: ${options.interval} minutes)`);
-        console.error("Press Ctrl+C to stop\n");
+        console.error(`Starting background extraction job (interval: ${options.interval} minutes)...`);
 
-        let iteration = 0;
+        try {
+          const jobName = `extract-${new URL(url).hostname}-${Date.now()}`;
+          const intervalSeconds = options.interval * 60;
 
-        const intervalFunc = async () => {
-          // If using --random, reselect instance randomly on each iteration
-          if (options.random) {
-            selectedInstance = await selectInstance();
-            apiEndpoint = selectedInstance.endpoint;
-          }
-
-          iteration++;
-          const timestamp = new Date().toLocaleString("en-US", {
-            hour12: false,
+          const createResponse = await axios.post(`${apiEndpoint}/api/jobs`, {
+            type: "extraction",
+            name: jobName,
+            config: {
+              url,
+              scrolls,
+              delay,
+              extraction: extractionConfig.schema ? extractionConfig : { schema: extractionConfig },
+              webhookUrl: options.webhook,
+            },
+            interval: intervalSeconds,
           });
-          console.error("\n" + "=".repeat(60));
-          console.error(`Extraction #${iteration} - ${timestamp}`);
-          console.error("=".repeat(60) + "\n");
 
-          const result = await commonExtract(
-            url,
-            scrolls,
-            delay,
-            apiEndpoint,
-            { ...extractionConfig, instanceName: selectedInstance.instanceName },
-          );
-          console.log(JSON.stringify(result, null, 2));
-          console.log();
+          const job = createResponse.data;
+          await axios.post(`${apiEndpoint}/api/jobs/${job.id}/start`);
 
-          if (options.webhook && result.success) {
-            await sendWebhook(options.webhook, result);
+          console.error(`Extraction job started successfully`);
+          console.error(`- Job ID: ${job.id}`);
+          console.error(`- Job Name: ${job.name}`);
+          console.error(`- URL: ${url}`);
+          console.error(`- Interval: ${options.interval} minutes`);
+          console.error(`\nUse 'pageflow status' to view job status`);
+          console.error(`Use 'pageflow extract --stop-job <number>' to stop the job`);
+          return;
+        } catch (error: any) {
+          if (error.response) {
+            console.error(`Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`);
+          } else {
+            console.error(`Error: ${error.message}`);
           }
-
-          // Show waiting message after each extraction
-          const nextTime = new Date(Date.now() + intervalSeconds * 1000);
-          console.error(`\nWaiting ${options.interval} minutes until next extraction...`);
-          console.error(
-            `Next extraction time: ${nextTime.toLocaleString("en-US", { hour12: false })}`,
-          );
-        };
-
-        await intervalFunc();
-
-        const timer = setInterval(intervalFunc, intervalSeconds * 1000);
-
-        process.on("SIGINT", () => {
-          clearInterval(timer);
-          console.error(`\n\nUser interrupted, executed ${iteration} extractions`);
-          process.exit(0);
-        });
-      } else {
-        const result = await commonExtract(
-          url,
-          scrolls,
-          delay,
-          apiEndpoint,
-          { ...extractionConfig, instanceName: selectedInstance.instanceName },
-        );
-        console.log(JSON.stringify(result, null, 2));
-
-        if (options.webhook && result.success) {
-          await sendWebhook(options.webhook, result);
+          process.exit(1);
         }
+      }
+
+      // Extract data
+      const result = await commonExtract(
+        url,
+        scrolls,
+        delay,
+        apiEndpoint,
+        { ...extractionConfig, instanceName: selectedInstance.instanceName },
+      );
+      console.log(JSON.stringify(result, null, 2));
+
+      if (options.webhook && result.success) {
+        await sendWebhook(options.webhook, result);
       }
     });
 
@@ -2232,6 +2286,370 @@ Use Cases:
         }
       } catch (error: any) {
         console.error(`Error: ${error.message}`);
+        process.exit(1);
+      }
+    });
+
+  // ============================================================================
+  // jobs command - Manage background jobs
+  // ============================================================================
+  const jobs = program
+    .command("jobs")
+    .description("Manage background jobs (cookie-sync, extraction)");
+
+  jobs
+    .command("create <type>")
+    .description("Create a new background job")
+    .requiredOption("--name <name>", "Job name")
+    .requiredOption("--config <json>", "Job configuration (JSON string or file path)")
+    .requiredOption("--interval <seconds>", "Job interval in seconds", parseInt)
+    .option("--use <name>", "Use specific named instance")
+    .addHelpText(
+      "after",
+      `
+Job Types:
+  cookie-sync    Sync cookies between instances
+  extraction     Extract data from URLs
+
+Examples:
+  # Create cookie-sync job
+  $ pageflow jobs create cookie-sync \\
+      --name "sync-to-test" \\
+      --config '{"targetUrl":"http://localhost:3101","domain":"all"}' \\
+      --interval 15
+
+  # Create extraction job
+  $ pageflow jobs create extraction \\
+      --name "monitor-prices" \\
+      --config '{"url":"https://example.com","extraction":{"schema":{...}},"scrolls":0,"delay":0}' \\
+      --interval 300
+`,
+    )
+    .action(async (type, options) => {
+      const instanceManager = new InstanceManager();
+      const instanceName = options.use || "default";
+      const instance = instanceManager.getInstance(instanceName);
+
+      if (!instance) {
+        console.error(`Error: Instance "${instanceName}" does not exist`);
+        process.exit(1);
+      }
+
+      if (instance.type === "local") {
+        const isRunning = await isProcessRunning(instance.pid);
+        if (!isRunning) {
+          console.error(`Error: Instance "${instanceName}" is not running`);
+          process.exit(1);
+        }
+      }
+
+      const apiEndpoint = instanceManager.getInstanceUrl(instance);
+
+      let config;
+      try {
+        if (fs.existsSync(options.config)) {
+          config = JSON.parse(fs.readFileSync(options.config, "utf-8"));
+        } else {
+          config = JSON.parse(options.config);
+        }
+      } catch (error: any) {
+        console.error(`Error: Invalid config JSON - ${error.message}`);
+        process.exit(1);
+      }
+
+      try {
+        const response = await axios.post(`${apiEndpoint}/api/jobs`, {
+          type,
+          name: options.name,
+          config,
+          interval: options.interval,
+        });
+
+        const job = response.data;
+        console.error(`Job created successfully`);
+        console.error(`- ID: ${job.id}`);
+        console.error(`- Type: ${job.type}`);
+        console.error(`- Name: ${job.name}`);
+        console.error(`- Interval: ${job.interval}s`);
+        console.error(`- Status: ${job.enabled ? "Enabled" : "Disabled"}`);
+        console.error(`\nUse 'pageflow jobs start ${job.id}' to start the job`);
+      } catch (error: any) {
+        if (error.response) {
+          console.error(
+            `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+          );
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  jobs
+    .command("list")
+    .description("List all jobs")
+    .option("--use <name>", "Use specific named instance")
+    .option("--type <type>", "Filter by job type")
+    .action(async (options) => {
+      const instanceManager = new InstanceManager();
+
+      // If --use is specified, only show jobs from that instance
+      if (options.use) {
+        const instance = instanceManager.getInstance(options.use);
+
+        if (!instance) {
+          console.error(`Error: Instance "${options.use}" does not exist`);
+          process.exit(1);
+        }
+
+        if (instance.type === "local") {
+          const isRunning = await isProcessRunning(instance.pid);
+          if (!isRunning) {
+            console.error(`Error: Instance "${options.use}" is not running`);
+            process.exit(1);
+          }
+        }
+
+        const apiEndpoint = instanceManager.getInstanceUrl(instance);
+
+        try {
+          const params = options.type ? { type: options.type } : {};
+          const response = await axios.get(`${apiEndpoint}/api/jobs`, { params });
+          const jobs = response.data.jobs;
+
+          if (jobs.length === 0) {
+            console.log("No jobs found");
+            console.log("\nCreate a job with: pageflow jobs create <type>");
+            return;
+          }
+
+          console.log(`\nTotal ${jobs.length} jobs in instance "${options.use}":\n`);
+          console.log(`${"ID".padEnd(8)} ${"Type".padEnd(15)} ${"Name".padEnd(26)} ${"Status".padEnd(10)} ${"Interval".padEnd(12)} ${"Runs".padEnd(8)} Last`);
+          console.log("-".repeat(108));
+
+          for (const job of jobs) {
+            const id = job.id.substring(0, 6).padEnd(8);
+            const type = job.type.padEnd(15);
+            const name = job.name.substring(0, 24).padEnd(26);
+            const statusText = job.enabled ? "Running" : "Stopped";
+            const statusColor = job.enabled ? "\x1b[1;32m" : "\x1b[1;90m";
+            const status = `${statusColor}${statusText}\x1b[0m`.padEnd(10 + 13);
+            const interval = `${job.interval}s`.padEnd(12);
+            const runs = String(job.runCount).padEnd(8);
+            const lastRun = job.lastRunAt
+              ? formatTimeAgo(new Date(job.lastRunAt))
+              : "not yet";
+            console.log(`${id} ${type} ${name} ${status} ${interval} ${runs} ${lastRun}`);
+          }
+          console.log();
+        } catch (error: any) {
+          if (error.response) {
+            console.error(
+              `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+            );
+          } else {
+            console.error(`Error: ${error.message}`);
+          }
+          process.exit(1);
+        }
+        return;
+      }
+
+      // No --use specified: show jobs from all running instances
+      const instances = instanceManager.getAllInstances();
+      const allJobs: Array<{ job: any; instanceName: string }> = [];
+
+      for (const instance of instances) {
+        // Skip if instance is not running
+        if (instance.type === "local") {
+          const isRunning = await isProcessRunning(instance.pid);
+          if (!isRunning) continue;
+        }
+
+        const apiEndpoint = instanceManager.getInstanceUrl(instance);
+
+        try {
+          const params = options.type ? { type: options.type } : {};
+          const response = await axios.get(`${apiEndpoint}/api/jobs`, {
+            params,
+            timeout: 2000
+          });
+          const jobs = response.data.jobs;
+
+          for (const job of jobs) {
+            allJobs.push({ job, instanceName: instance.name });
+          }
+        } catch (error: any) {
+          // Skip instances that don't support jobs API or are unreachable
+          if (error.response?.status !== 404) {
+            console.error(`Warning: Failed to get jobs from ${instance.name}: ${error.message}`);
+          }
+        }
+      }
+
+      if (allJobs.length === 0) {
+        console.log("No jobs found");
+        console.log("\nCreate a job with: pageflow jobs create <type>");
+        return;
+      }
+
+      console.log(`\nTotal ${allJobs.length} jobs:\n`);
+      console.log(`${"ID".padEnd(8)} ${"Instance".padEnd(12)} ${"Type".padEnd(15)} ${"Name".padEnd(20)} ${"Status".padEnd(10)} ${"Interval".padEnd(12)} ${"Runs".padEnd(8)} Last`);
+      console.log("-".repeat(120));
+
+      for (const { job, instanceName } of allJobs) {
+        const id = job.id.substring(0, 6).padEnd(8);
+        const instance = instanceName.substring(0, 10).padEnd(12);
+        const type = job.type.padEnd(15);
+        const name = job.name.substring(0, 18).padEnd(20);
+        const statusText = job.enabled ? "Running" : "Stopped";
+        const statusColor = job.enabled ? "\x1b[1;32m" : "\x1b[1;90m";
+        const status = `${statusColor}${statusText}\x1b[0m`.padEnd(10 + 13);
+        const interval = `${job.interval}s`.padEnd(12);
+        const runs = String(job.runCount).padEnd(8);
+        const lastRun = job.lastRunAt
+          ? formatTimeAgo(new Date(job.lastRunAt))
+          : "not yet";
+        console.log(`${id} ${instance} ${type} ${name} ${status} ${interval} ${runs} ${lastRun}`);
+      }
+      console.log();
+    });
+
+  // Helper function to find job instance
+  async function findJobInstance(instanceManager: InstanceManager, jobId: string, specifiedInstance?: string): Promise<{ instance: any; apiEndpoint: string }> {
+    // If instance is specified, use it directly
+    if (specifiedInstance) {
+      const instance = instanceManager.getInstance(specifiedInstance);
+      if (!instance) {
+        console.error(`Error: Instance "${specifiedInstance}" does not exist`);
+        process.exit(1);
+      }
+
+      if (instance.type === "local") {
+        const isRunning = await isProcessRunning(instance.pid);
+        if (!isRunning) {
+          console.error(`Error: Instance "${specifiedInstance}" is not running`);
+          process.exit(1);
+        }
+      }
+
+      const apiEndpoint = instanceManager.getInstanceUrl(instance);
+      return { instance, apiEndpoint };
+    }
+
+    // No instance specified: search all running instances
+    const instances = instanceManager.getAllInstances();
+    const found: Array<{ instance: any; apiEndpoint: string }> = [];
+
+    for (const instance of instances) {
+      // Skip if instance is not running
+      if (instance.type === "local") {
+        const isRunning = await isProcessRunning(instance.pid);
+        if (!isRunning) continue;
+      }
+
+      const apiEndpoint = instanceManager.getInstanceUrl(instance);
+
+      try {
+        const response = await axios.get(`${apiEndpoint}/api/jobs/${jobId}`, { timeout: 2000 });
+        if (response.status === 200) {
+          found.push({ instance, apiEndpoint });
+        }
+      } catch (error: any) {
+        // Job not found in this instance, continue
+      }
+    }
+
+    if (found.length === 0) {
+      console.error(`Error: Job ${jobId} not found in any running instance`);
+      console.error(`Use --use <name> to specify instance, or check job ID with: pageflow jobs list`);
+      process.exit(1);
+    }
+
+    if (found.length > 1) {
+      console.error(`Error: Job ${jobId} found in multiple instances: ${found.map(f => f.instance.name).join(", ")}`);
+      console.error(`Use --use <name> to specify which instance`);
+      process.exit(1);
+    }
+
+    return found[0];
+  }
+
+  jobs
+    .command("start <id>")
+    .description("Start a job")
+    .option("--use <name>", "Use specific named instance")
+    .action(async (id, options) => {
+      const instanceManager = new InstanceManager();
+      const { instance, apiEndpoint } = await findJobInstance(instanceManager, id, options.use);
+
+      try {
+        const response = await axios.post(`${apiEndpoint}/api/jobs/${id}/start`);
+        console.error(`Job started successfully`);
+        console.error(`- Instance: ${instance.name}`);
+        console.error(`- ID: ${response.data.id}`);
+        console.error(`- Type: ${response.data.type}`);
+        console.error(`- Name: ${response.data.name}`);
+      } catch (error: any) {
+        if (error.response) {
+          console.error(
+            `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+          );
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  jobs
+    .command("stop <id>")
+    .description("Stop a job")
+    .option("--use <name>", "Use specific named instance")
+    .action(async (id, options) => {
+      const instanceManager = new InstanceManager();
+      const { instance, apiEndpoint } = await findJobInstance(instanceManager, id, options.use);
+
+      try {
+        const response = await axios.post(`${apiEndpoint}/api/jobs/${id}/stop`);
+        console.error(`Job stopped successfully`);
+        console.error(`- Instance: ${instance.name}`);
+        console.error(`- ID: ${response.data.id}`);
+        console.error(`- Type: ${response.data.type}`);
+        console.error(`- Name: ${response.data.name}`);
+      } catch (error: any) {
+        if (error.response) {
+          console.error(
+            `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+          );
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  jobs
+    .command("delete <id>")
+    .description("Delete a job")
+    .option("--use <name>", "Use specific named instance")
+    .action(async (id, options) => {
+      const instanceManager = new InstanceManager();
+      const { instance, apiEndpoint } = await findJobInstance(instanceManager, id, options.use);
+
+      try {
+        await axios.delete(`${apiEndpoint}/api/jobs/${id}`);
+        console.error(`Job deleted successfully`);
+        console.error(`- Instance: ${instance.name}`);
+        console.error(`- ID: ${id}`);
+      } catch (error: any) {
+        if (error.response) {
+          console.error(
+            `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+          );
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
         process.exit(1);
       }
     });
