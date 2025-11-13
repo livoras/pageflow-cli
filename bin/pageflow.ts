@@ -718,7 +718,7 @@ async function showStatus(): Promise<void> {
 
             taskData.forEach((data: any, index: number) => {
               console.error(
-                `  \x1b[1;36m#${index + 1}\x1b[0m To: ${data.targetName.padEnd(maxTargetLen)} | Domain: ${data.domain.padEnd(maxDomainLen)} | Interval: ${data.interval.padStart(maxIntervalLen)} | Last sync: ${data.lastSync}`,
+                `  \x1b[1m#${index + 1}\x1b[0m To: ${data.targetName.padEnd(maxTargetLen)} | Domain: ${data.domain.padEnd(maxDomainLen)} | Interval: ${data.interval.padStart(maxIntervalLen)} | Last sync: ${data.lastSync}`,
               );
             });
           }
