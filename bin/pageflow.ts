@@ -611,7 +611,7 @@ function getProcessEnv(pid: number): Record<string, string> {
  */
 function formatTimeAgo(date: Date): string {
   const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const seconds = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
 
   if (seconds < 60) {
     return `${seconds}s ago`;
