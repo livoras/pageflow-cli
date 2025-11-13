@@ -716,11 +716,11 @@ async function showStatus(): Promise<void> {
             const maxDomainLen = Math.max(...taskData.map((t: any) => t.domain.length));
             const maxIntervalLen = Math.max(...taskData.map((t: any) => t.interval.length));
 
-            for (const data of taskData) {
+            taskData.forEach((data: any, index: number) => {
               console.error(
-                `  \x1b[1;36m•\x1b[0m To: ${data.targetName.padEnd(maxTargetLen)} | Domain: ${data.domain.padEnd(maxDomainLen)} | Interval: ${data.interval.padStart(maxIntervalLen)} | Last sync: ${data.lastSync}`,
+                `  \x1b[1;36m#${index + 1}\x1b[0m To: ${data.targetName.padEnd(maxTargetLen)} | Domain: ${data.domain.padEnd(maxDomainLen)} | Interval: ${data.interval.padStart(maxIntervalLen)} | Last sync: ${data.lastSync}`,
               );
-            }
+            });
           }
         } catch (error: any) {
           if (error.response?.status === 404) {
@@ -1523,10 +1523,11 @@ JSON Format:
     .command("sync")
     .description("Sync cookies from one instance to another")
     .requiredOption("--from <name>", "Source instance name")
-    .requiredOption("--to <name>", "Target instance name")
+    .option("--to <name>", "Target instance name")
     .option("--domain <domain>", "Domain to filter cookies (default: all)", "all")
     .option("--auto <mode>", "Auto sync mode: start or stop")
     .option("--interval <seconds>", "Auto sync interval in seconds (default: 15)", "15")
+    .option("--task <number>", "Task number to stop (use with --auto stop)")
     .addHelpText(
       "after",
       `
@@ -1536,6 +1537,7 @@ Options:
   --domain <domain>     Domain to filter cookies (default: all)
   --auto <start|stop>   Enable/disable automatic sync
   --interval <seconds>  Auto sync interval in seconds (default: 15)
+  --task <number>       Task number to stop (use with --auto stop)
 
 Examples:
   # Sync all cookies once
@@ -1550,8 +1552,11 @@ Examples:
   # Start auto-sync with custom interval
   $ pageflow cookies sync --from default --to test --domain xiaohongshu --auto start --interval 30
 
-  # Stop auto-sync
+  # Stop auto-sync by specifying target and domain
   $ pageflow cookies sync --from default --to test --auto stop
+
+  # Stop auto-sync by task number
+  $ pageflow cookies sync --from default --auto stop --task 1
 
 `,
     )
@@ -1562,6 +1567,7 @@ Examples:
       const domain = options.domain;
       const autoMode = options.auto;
       const interval = parseInt(options.interval, 10);
+      const taskNumber = options.task ? parseInt(options.task, 10) : null;
 
       // Validate from instance
       const fromInstance = instanceManager.getInstance(fromName);
@@ -1577,7 +1583,61 @@ Examples:
         }
       }
 
-      // Validate to instance
+      const fromEndpoint = instanceManager.getInstanceUrl(fromInstance);
+
+      // Handle stop by task number
+      if (autoMode === "stop" && taskNumber !== null) {
+        try {
+          // Get auto-sync status
+          const statusResponse = await axios.get(
+            `${fromEndpoint}/api/cookies/auto-sync/status`,
+            { timeout: 2000 },
+          );
+          const tasks = statusResponse.data.tasks;
+
+          if (!tasks || tasks.length === 0) {
+            console.error(`Error: No auto-sync tasks found`);
+            process.exit(1);
+          }
+
+          if (taskNumber < 1 || taskNumber > tasks.length) {
+            console.error(`Error: Task number ${taskNumber} is out of range (1-${tasks.length})`);
+            process.exit(1);
+          }
+
+          const task = tasks[taskNumber - 1];
+          console.error(
+            `Stopping auto-sync task #${taskNumber} (to: ${task.targetUrl}, domain: ${task.domain})...`,
+          );
+
+          const response = await axios.post(
+            `${fromEndpoint}/api/cookies/auto-sync/stop`,
+            {
+              targetUrl: task.targetUrl,
+              domain: task.domain,
+            },
+          );
+
+          console.error(response.data.message);
+          return;
+        } catch (error: any) {
+          if (error.response) {
+            console.error(
+              `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+            );
+          } else {
+            console.error(`Error: ${error.message}`);
+          }
+          process.exit(1);
+        }
+      }
+
+      // Validate to instance for other modes
+      if (!toName) {
+        console.error(`Error: --to option is required`);
+        process.exit(1);
+      }
+
       const toInstance = instanceManager.getInstance(toName);
       if (!toInstance) {
         console.error(`Error: Instance "${toName}" does not exist`);
@@ -1591,7 +1651,6 @@ Examples:
         }
       }
 
-      const fromEndpoint = instanceManager.getInstanceUrl(fromInstance);
       const toEndpoint = instanceManager.getInstanceUrl(toInstance);
 
       try {

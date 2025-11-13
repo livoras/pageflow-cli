@@ -96,3 +96,8 @@ export DISPLAY=:99
 - 不用内联样式、不创建新文件、不用Tailwind类名
 - 不要使用 emoji
 - 修改 `src/` 代码后，需要重启对应的本地实例才能生效
+
+## 测试规则
+
+- **必须使用 `./pageflow` 命令**，不要手动用 `tsx bin/pageflow.ts`
+- `./pageflow` 会执行编译后的代码（dist/pageflow.js），确保测试的是实际发布的版本
