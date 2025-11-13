@@ -63,10 +63,12 @@ export class ExtractionJob extends Job {
             headers: { "Content-Type": "application/json" },
           });
           console.log(`[ExtractionJob] Webhook delivered to ${webhookUrl}`);
+          this.webhookSuccessCount++;
         } catch (error: any) {
           console.error(
             `[ExtractionJob] Webhook failed: ${error.message}`,
           );
+          this.webhookFailureCount++;
         }
       }
 

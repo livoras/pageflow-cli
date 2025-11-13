@@ -10,6 +10,8 @@ export abstract class Job {
   createdAt: Date;
   lastRunAt: Date | null;
   runCount: number;
+  webhookSuccessCount: number;
+  webhookFailureCount: number;
 
   private timer: NodeJS.Timer | null = null;
   private storage: JobStorage | null = null;
@@ -24,6 +26,8 @@ export abstract class Job {
     createdAt: Date;
     lastRunAt: Date | null;
     runCount: number;
+    webhookSuccessCount?: number;
+    webhookFailureCount?: number;
   }) {
     this.id = data.id;
     this.type = data.type;
@@ -34,6 +38,8 @@ export abstract class Job {
     this.createdAt = data.createdAt;
     this.lastRunAt = data.lastRunAt;
     this.runCount = data.runCount;
+    this.webhookSuccessCount = data.webhookSuccessCount || 0;
+    this.webhookFailureCount = data.webhookFailureCount || 0;
   }
 
   setStorage(storage: JobStorage): void {
@@ -116,6 +122,8 @@ export abstract class Job {
       createdAt: this.createdAt.toISOString(),
       lastRunAt: this.lastRunAt ? this.lastRunAt.toISOString() : null,
       runCount: this.runCount,
+      webhookSuccessCount: this.webhookSuccessCount,
+      webhookFailureCount: this.webhookFailureCount,
     };
   }
 }

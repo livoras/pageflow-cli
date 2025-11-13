@@ -714,7 +714,8 @@ async function showStatus(): Promise<void> {
               console.error(`  \x1b[1m${job.id.substring(0, 6)}\x1b[0m [${statusText}] ${job.type} - ${job.name}`);
               console.error(`    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`);
               if (job.config?.webhookUrl) {
-                console.error(`    \x1b[4mWebhook: ${job.config.webhookUrl}\x1b[0m`);
+                const webhookStats = `(\x1b[32m${job.webhookSuccessCount || 0} succeed\x1b[0m, \x1b[31m${job.webhookFailureCount || 0} failed\x1b[0m)`;
+                console.error(`    \x1b[4mWebhook: ${job.config.webhookUrl}\x1b[0m ${webhookStats}`);
               }
             });
           }
@@ -759,7 +760,8 @@ async function showStatus(): Promise<void> {
               `    Interval: ${intervalText} | Runs: ${job.runCount} | Last: ${lastRunText}`,
             );
             if (job.config?.webhookUrl) {
-              console.error(`    \x1b[4mWebhook: ${job.config.webhookUrl}\x1b[0m`);
+              const webhookStats = `(\x1b[32m${job.webhookSuccessCount || 0} succeed\x1b[0m, \x1b[31m${job.webhookFailureCount || 0} failed\x1b[0m)`;
+              console.error(`    \x1b[4mWebhook: ${job.config.webhookUrl}\x1b[0m ${webhookStats}`);
             }
           });
         }
