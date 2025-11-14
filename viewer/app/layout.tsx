@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Pageflow Webhook Viewer",
-  description: "View webhook data from Pageflow jobs",
+  title: "小红书数据监控 - Pageflow",
+  description: "实时监控小红书帖子数据",
 };
 
 export default function RootLayout({
@@ -12,11 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "20px" }}>
-          {children}
-        </div>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -1,0 +1,278 @@
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+}
+
+.refreshBtn {
+  padding: 10px 20px;
+  background: #ff2442;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.refreshBtn:hover {
+  background: #e61e3a;
+}
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.error {
+  padding: 15px;
+  background: #fee;
+  color: #c33;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.content {
+  margin-top: 20px;
+}
+
+.stats {
+  margin-bottom: 15px;
+  color: #666;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  table-layout: fixed;
+}
+
+.table thead {
+  background: #fafafa;
+}
+
+.table th {
+  padding: 12px 15px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #e8e8e8;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.table th:nth-child(1) {
+  width: 30%;
+  text-align: left;
+}
+
+.table th:nth-child(2) {
+  width: 12%;
+  text-align: left;
+}
+
+.table th:nth-child(3) {
+  width: 13%;
+  text-align: left;
+}
+
+.table th:nth-child(4) {
+  width: 10%;
+  text-align: left;
+}
+
+.table th:nth-child(5),
+.table th:nth-child(6),
+.table th:nth-child(7) {
+  width: 8%;
+  text-align: center;
+}
+
+.table th:nth-child(8) {
+  width: 9%;
+  text-align: center;
+}
+
+.dataRow {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+}
+
+.dataRow:nth-child(even) {
+  background: #fafafa;
+}
+
+.dataRow:hover {
+  background: #fff5f6;
+}
+
+.table td {
+  padding: 12px 15px;
+  font-size: 13px;
+  vertical-align: middle;
+  color: #666;
+}
+
+.titleCol {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titleLink {
+  color: #333;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.titleLink:hover {
+  color: #ff2442;
+}
+
+.authorCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.authorCell span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.authorAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.statCell {
+  text-align: center;
+  font-weight: 700;
+  color: #000 !important;
+  font-size: 18px;
+}
+
+.changePositive {
+  color: #22c55e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.changeNegative {
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.commentBtn {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.actionLink {
+  color: #666;
+  text-decoration: none;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+.actionLink:hover {
+  color: #ff2442;
+}
+
+.commentsRow {
+  background: #f9f9f9;
+}
+
+.commentsList {
+  padding: 15px 20px;
+}
+
+.commentItem {
+  display: flex;
+  padding: 12px 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.commentItem:last-child {
+  border-bottom: none;
+}
+
+.commentAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.commentContent {
+  flex: 1;
+}
+
+.commentMeta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.commentAuthor {
+  font-weight: 500;
+  color: #333;
+  font-size: 13px;
+}
+
+.commentTime {
+  font-size: 12px;
+  color: #999;
+}
+
+.commentText {
+  margin: 0 0 8px 0;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.commentImage {
+  max-width: 200px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.commentStats {
+  display: flex;
+  gap: 15px;
+  font-size: 12px;
+  color: #999;
+}
