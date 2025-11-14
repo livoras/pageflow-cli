@@ -16,6 +16,21 @@ export async function POST(request: NextRequest) {
     }
 
     const settings = settingsStore.getSettings();
+
+    const { stdout: jobsOutput } = await execAsync("pageflow jobs list --use tago");
+    const runningJobsCount = (jobsOutput.match(/Running/g) || []).length;
+
+    if (runningJobsCount >= settings.maxJobs) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `任务数已达上限 (${runningJobsCount}/${settings.maxJobs})`,
+          message: "请在配置页面调整最大任务数或停止部分任务后重试",
+        },
+        { status: 400 }
+      );
+    }
+
     const webhookUrl = "http://8.155.175.166:7005/api/xiaohongshu/webhook";
     const extractionId = "24";
     const interval = settings.interval.toString();

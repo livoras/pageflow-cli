@@ -8,6 +8,7 @@ interface Settings {
   wechatWebhookUrl: string;
   likesThreshold: number;
   commentsThreshold: number;
+  maxJobs: number;
 }
 
 export default function SettingsPage() {
@@ -16,6 +17,7 @@ export default function SettingsPage() {
     wechatWebhookUrl: "",
     likesThreshold: 20,
     commentsThreshold: 10,
+    maxJobs: 10,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -138,6 +140,17 @@ export default function SettingsPage() {
             onChange={(e) => handleChange("commentsThreshold", parseInt(e.target.value))}
             className={styles.input}
             min="0"
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.label}>最大任务数</label>
+          <input
+            type="number"
+            value={settings.maxJobs}
+            onChange={(e) => handleChange("maxJobs", parseInt(e.target.value))}
+            className={styles.input}
+            min="1"
           />
         </div>
 

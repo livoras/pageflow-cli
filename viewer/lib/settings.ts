@@ -6,6 +6,7 @@ export interface Settings {
   wechatWebhookUrl: string;
   likesThreshold: number;
   commentsThreshold: number;
+  maxJobs: number;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -13,6 +14,7 @@ const DEFAULT_SETTINGS: Settings = {
   wechatWebhookUrl: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d18c52a5-f561-4ec6-8482-fdc8b94f36ec",
   likesThreshold: 20,
   commentsThreshold: 10,
+  maxJobs: 10,
 };
 
 class SettingsStore {
