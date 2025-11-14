@@ -25,7 +25,7 @@ pnpm build
 
 echo ""
 echo "[3/7] 上传文件到服务器..."
-ssh $SERVER "mkdir -p $REMOTE_DIR"
+ssh $SERVER "mkdir -p $REMOTE_DIR && rm -rf $REMOTE_DIR/.next"
 scp -r .next package.json pnpm-lock.yaml app lib next.config.mjs $SERVER:$REMOTE_DIR/
 
 echo ""

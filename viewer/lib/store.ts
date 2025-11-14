@@ -1,9 +1,11 @@
 import fs from "fs";
 import path from "path";
+import { settingsStore } from "./settings";
 
 interface WebhookData {
   timestamp: string;
   data: any;
+  interval?: number;
   changes?: {
     likes?: number;
     collects?: number;
@@ -83,9 +85,11 @@ class DataStore {
       }
     }
 
+    const settings = settingsStore.getSettings();
     cache.set(url, {
       timestamp: new Date().toISOString(),
       data,
+      interval: settings.interval,
       changes,
     });
     this.saveToFile(cache);

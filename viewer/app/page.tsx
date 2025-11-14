@@ -6,6 +6,7 @@ import styles from "./page.module.css";
 interface WebhookData {
   timestamp: string;
   data: any;
+  interval?: number;
   changes?: {
     likes?: number;
     collects?: number;
@@ -87,6 +88,13 @@ export default function Home() {
     const className = change > 0 ? styles.changePositive : styles.changeNegative;
     const sign = change > 0 ? "+" : "";
     return <span className={className}> ({sign}{change})</span>;
+  };
+
+  const getNextUpdateTime = (timestamp: string, interval?: number) => {
+    if (!interval) return "-";
+    const lastUpdate = new Date(timestamp);
+    const nextTime = new Date(lastUpdate.getTime() + interval * 60 * 1000);
+    return `${nextTime.getHours().toString().padStart(2, '0')}:${nextTime.getMinutes().toString().padStart(2, '0')}`;
   };
 
   const handleDelete = async (url: string) => {
@@ -209,13 +217,15 @@ export default function Home() {
         <div className={styles.content}>
           <div className={styles.stats}>共 {dataList.length} 条数据</div>
 
-          <table className={styles.table}>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
             <thead>
               <tr>
                 <th>标题</th>
                 <th>作者</th>
                 <th>发布时间</th>
                 <th>更新时间</th>
+                <th>下次更新</th>
                 <th>点赞</th>
                 <th>收藏</th>
                 <th>评论</th>
@@ -247,6 +257,7 @@ export default function Home() {
                       </td>
                       <td>{post?.publish_time || item.timestamp}</td>
                       <td>{getRelativeTime(item.timestamp)}</td>
+                      <td>{getNextUpdateTime(item.timestamp, item.interval)}</td>
                       <td className={styles.statCell}>
                         {extractNumber(stats?.likes)}
                         {renderChange(item.changes?.likes)}
@@ -303,6 +314,7 @@ export default function Home() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>
