@@ -1,4 +1,4 @@
-const WECHAT_WEBHOOK_URL = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d18c52a5-f561-4ec6-8482-fdc8b94f36ec";
+import { settingsStore } from "./settings";
 
 interface NotificationData {
   title: string;
@@ -10,6 +10,8 @@ interface NotificationData {
 }
 
 export async function sendWeChatNotification(data: NotificationData): Promise<boolean> {
+  const settings = settingsStore.getSettings();
+  const WECHAT_WEBHOOK_URL = settings.wechatWebhookUrl;
   const message = {
     msgtype: "markdown",
     markdown: {

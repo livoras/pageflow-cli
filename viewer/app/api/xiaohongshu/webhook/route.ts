@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataStore, notificationStore } from "@/lib/store";
 import { sendWeChatNotification } from "@/lib/wechatNotifier";
-
-const LIKES_THRESHOLD = 20;
-const COMMENTS_THRESHOLD = 10;
+import { settingsStore } from "@/lib/settings";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +31,8 @@ export async function POST(request: NextRequest) {
 
       console.log(`笔记数据 - 点赞: ${likes}, 评论: ${comments}, 收藏: ${collects}`);
 
-      if (likes >= LIKES_THRESHOLD && comments >= COMMENTS_THRESHOLD) {
+      const settings = settingsStore.getSettings();
+      if (likes >= settings.likesThreshold && comments >= settings.commentsThreshold) {
         if (!notificationStore.isNotified(url)) {
           console.log(`达到阈值，发送通知: ${post.title}`);
 

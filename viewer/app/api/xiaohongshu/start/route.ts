@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { settingsStore } from "@/lib/settings";
 
 const execAsync = promisify(exec);
 
@@ -14,9 +15,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
+    const settings = settingsStore.getSettings();
     const webhookUrl = "http://8.155.175.166:7005/api/xiaohongshu/webhook";
     const extractionId = "24";
-    const interval = "10";
+    const interval = settings.interval.toString();
 
     const command = `pageflow extract --use tago --interval ${interval} --webhook "${webhookUrl}" "${url}" ${extractionId}`;
     console.log("执行命令:", command);
