@@ -34,6 +34,59 @@
   background: #e61e3a;
 }
 
+.startForm {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.urlInput {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.urlInput:focus {
+  outline: none;
+  border-color: #ff2442;
+}
+
+.urlInput:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.startBtn {
+  padding: 10px 20px;
+  background: #1a1a1a;
+  color: white;
+  border: 1px solid #333;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  white-space: nowrap;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.startBtn:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #444;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.startBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .loading {
   text-align: center;
   padding: 40px;

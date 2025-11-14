@@ -161,6 +161,7 @@ Examples:
     .description("List all jobs")
     .option("--use <name>", "Use specific named instance")
     .option("--type <type>", "Filter by job type")
+    .option("--full", "Output full JSON instead of table")
     .action(async (options) => {
       const instanceManager = new InstanceManager();
 
@@ -191,6 +192,22 @@ Examples:
           if (jobs.length === 0) {
             console.log("No jobs found");
             console.log("\nCreate a job with: pageflow jobs create <type>");
+            return;
+          }
+
+          // Output full JSON if --full flag is set
+          if (options.full) {
+            // Fetch detailed info for each job
+            const fullJobs = [];
+            for (const job of jobs) {
+              try {
+                const detailResponse = await axios.get(`${apiEndpoint}/api/jobs/${job.id}`);
+                fullJobs.push(detailResponse.data);
+              } catch (error: any) {
+                console.error(`Warning: Failed to fetch details for job ${job.id}: ${error.message}`);
+              }
+            }
+            console.log(JSON.stringify(fullJobs, null, 2));
             return;
           }
 
@@ -261,6 +278,27 @@ Examples:
       if (allJobs.length === 0) {
         console.log("No jobs found");
         console.log("\nCreate a job with: pageflow jobs create <type>");
+        return;
+      }
+
+      // Output full JSON if --full flag is set
+      if (options.full) {
+        const fullJobsWithInstance = [];
+        for (const { job, instanceName } of allJobs) {
+          const instance = instances.find(i => i.name === instanceName);
+          if (!instance) continue;
+          const apiEndpoint = instanceManager.getInstanceUrl(instance);
+          try {
+            const detailResponse = await axios.get(`${apiEndpoint}/api/jobs/${job.id}`);
+            fullJobsWithInstance.push({
+              instance: instanceName,
+              ...detailResponse.data
+            });
+          } catch (error: any) {
+            console.error(`Warning: Failed to fetch details for job ${job.id}: ${error.message}`);
+          }
+        }
+        console.log(JSON.stringify(fullJobsWithInstance, null, 2));
         return;
       }
 

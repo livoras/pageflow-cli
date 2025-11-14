@@ -140,3 +140,21 @@ export DISPLAY=:99
 
 - **必须使用 `./pageflow` 命令**，不要手动用 `tsx bin/pageflow.ts`
 - `./pageflow` 会执行编译后的代码（dist/pageflow.js），确保测试的是实际发布的版本
+
+## Viewer 开发
+
+### 启动方式
+```bash
+# 本地开发服务器
+cd viewer && pnpm dev
+# 访问 http://localhost:9999
+
+# 生产部署（ali 服务器）
+bash scripts/deploy-viewer.sh
+# 访问 http://8.155.175.166:7005
+```
+
+### 功能
+- 展示小红书数据监控（点赞、收藏、评论变化）
+- 启动新的爬虫任务（输入 URL）
+- 删除数据并停止对应的 job

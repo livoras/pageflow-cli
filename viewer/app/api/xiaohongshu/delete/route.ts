@@ -8,41 +8,75 @@ const execAsync = promisify(exec);
 export const dynamic = 'force-dynamic';
 
 export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const url = searchParams.get("url");
+  try {
+    const { searchParams } = new URL(request.url);
+    const url = searchParams.get("url");
 
-  if (!url) {
-    return NextResponse.json({ error: "URL parameter is required" }, { status: 400 });
-  }
+    if (!url) {
+      return NextResponse.json({ success: false, error: "URL parameter is required" }, { status: 400 });
+    }
 
-  dataStore.deleteData(url);
+    dataStore.deleteData(url);
 
-  const { stdout } = await execAsync("./pageflow jobs list tago", {
-    cwd: process.cwd() + "/..",
-  });
+    const listCommand = "pageflow jobs list --use tago --full";
+    console.log("执行命令:", listCommand);
+    const { stdout } = await execAsync(listCommand);
 
-  const lines = stdout.split("\n");
-  let jobId: string | null = null;
+    let jobs;
+    try {
+      jobs = JSON.parse(stdout);
+    } catch (error: any) {
+      console.error("解析 JSON 失败:", error.message, "输出:", stdout);
+      throw new Error(`Failed to parse jobs JSON: ${error.message}`);
+    }
 
-  for (const line of lines) {
-    if (line.includes(url) || (url.includes("xiaohongshu.com") && line.includes("xiaohongshu.com")) || (url.includes("xhslink.com") && line.includes("xhslink.com"))) {
-      const match = line.match(/([a-z0-9]{6})/);
-      if (match) {
-        jobId = match[1];
+    let jobId: string | null = null;
+
+    for (const job of jobs) {
+      const jobUrl = job.config?.url;
+      console.log("检查 job:", job.id, "URL:", jobUrl);
+      if (jobUrl === url) {
+        jobId = job.id;
+        console.log("精确匹配到 job ID:", jobId);
         break;
       }
     }
-  }
 
-  if (jobId) {
-    await execAsync(`./pageflow jobs stop ${jobId} tago`, {
-      cwd: process.cwd() + "/..",
+    if (!jobId) {
+      console.warn("未找到匹配的 job，URL:", url);
+    }
+
+    if (jobId) {
+      const deleteCommand = `pageflow jobs delete ${jobId} --use tago`;
+      console.log("执行命令:", deleteCommand);
+      await execAsync(deleteCommand);
+    }
+
+    return NextResponse.json({
+      success: true,
+      deletedUrl: url,
+      deletedJob: jobId,
+      warning: jobId ? null : "未找到对应的 job，可能已被删除或 URL 不匹配"
     });
+  } catch (error: any) {
+    console.error("删除失败:", {
+      message: error.message,
+      stdout: error.stdout,
+      stderr: error.stderr,
+      code: error.code,
+      stack: error.stack
+    });
+    return NextResponse.json(
+      {
+        success: false,
+        error: "删除失败",
+        message: error.message,
+        stdout: error.stdout || "",
+        stderr: error.stderr || "",
+        code: error.code,
+        stack: error.stack
+      },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({
-    success: true,
-    deletedUrl: url,
-    stoppedJob: jobId
-  });
 }

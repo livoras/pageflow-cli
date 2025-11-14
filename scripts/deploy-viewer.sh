@@ -15,21 +15,26 @@ echo "========================================================"
 cd "$(dirname "$0")/.."
 
 echo ""
-echo "[1/6] 进入 viewer 目录并安装依赖..."
+echo "[1/7] 进入 viewer 目录并安装依赖..."
 cd viewer
 pnpm install
 
 echo ""
-echo "[2/6] 构建 Next.js 应用..."
+echo "[2/7] 构建 Next.js 应用..."
 pnpm build
 
 echo ""
-echo "[3/6] 上传文件到服务器..."
+echo "[3/7] 上传文件到服务器..."
 ssh $SERVER "mkdir -p $REMOTE_DIR"
 scp -r .next package.json pnpm-lock.yaml app lib next.config.mjs $SERVER:$REMOTE_DIR/
 
 echo ""
-echo "[4/6] 在服务器上安装依赖..."
+echo "[4/7] 同步 extraction 模板到服务器..."
+ssh $SERVER "mkdir -p /root/.pageflow/extractions"
+scp ~/.pageflow/extractions/*.json $SERVER:/root/.pageflow/extractions/ 2>/dev/null || echo "没有找到 extraction 模板，跳过"
+
+echo ""
+echo "[5/7] 在服务器上安装依赖..."
 ssh $SERVER "
   cd $REMOTE_DIR
   if ! command -v pnpm &> /dev/null; then
@@ -40,7 +45,7 @@ ssh $SERVER "
 "
 
 echo ""
-echo "[5/6] 停止旧服务并启动新服务..."
+echo "[6/7] 停止旧服务并启动新服务..."
 ssh $SERVER "
   # 停止旧进程
   OLD_PID=\$(ss -tlnp 2>/dev/null | grep :$PORT | grep -oP 'pid=\K[0-9]+' | head -1)
@@ -58,7 +63,7 @@ ssh $SERVER "
 "
 
 echo ""
-echo "[6/6] 验证服务状态..."
+echo "[7/7] 验证服务状态..."
 if ssh $SERVER "ss -tlnp 2>/dev/null | grep -q :$PORT"; then
   echo "服务启动成功！"
   echo ""

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 interface WebhookData {
@@ -19,6 +19,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
+  const [newUrl, setNewUrl] = useState("");
+  const [starting, setStarting] = useState(false);
 
   const fetchData = async (showLoading = false) => {
     try {
@@ -88,29 +90,89 @@ export default function Home() {
   };
 
   const handleDelete = async (url: string) => {
-    if (!confirm(`确定要删除这条数据吗？\n\n这将同时停止对应的爬虫任务。`)) {
+    if (!confirm(`确定要删除这条数据吗？\n\n这将同时删除对应的爬虫任务。`)) {
       return;
     }
 
     setDeleting(prev => new Set(prev).add(url));
 
-    const response = await fetch(`/api/xiaohongshu/delete?url=${encodeURIComponent(url)}`, {
-      method: "DELETE",
-    });
+    try {
+      const response = await fetch(`/api/xiaohongshu/delete?url=${encodeURIComponent(url)}`, {
+        method: "DELETE",
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (result.success) {
-      await fetchData(false);
-    } else {
-      alert("删除失败");
+      if (result.success) {
+        if (result.warning) {
+          alert(`删除成功，但有警告：\n\n${result.warning}`);
+        }
+        await fetchData(false);
+      } else {
+        console.error("删除失败:", result);
+        const errorDetails = [
+          `错误: ${result.error || "未知错误"}`,
+          result.message && `消息: ${result.message}`,
+          result.stderr && `stderr:\n${result.stderr}`,
+          result.stdout && `stdout:\n${result.stdout}`,
+          result.code && `错误码: ${result.code}`,
+        ].filter(Boolean).join("\n\n");
+        alert(`删除失败\n\n${errorDetails}`);
+      }
+    } catch (error: any) {
+      console.error("删除失败: 网络错误", error);
+      alert(`删除失败: 网络错误\n\n${error.message || error}`);
+    } finally {
+      setDeleting(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(url);
+        return newSet;
+      });
+    }
+  };
+
+  const handleStart = async () => {
+    if (!newUrl.trim()) {
+      alert("请输入 URL");
+      return;
     }
 
-    setDeleting(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(url);
-      return newSet;
-    });
+    setStarting(true);
+
+    try {
+      const response = await fetch("/api/xiaohongshu/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: newUrl }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const message = result.jobId
+          ? `爬虫任务已启动\nJob ID: ${result.jobId}`
+          : "爬虫任务已启动";
+        alert(message);
+        setNewUrl("");
+      } else {
+        console.error("启动失败:", result);
+        const errorDetails = [
+          `错误: ${result.error || "未知错误"}`,
+          result.message && `消息: ${result.message}`,
+          result.stderr && `stderr:\n${result.stderr}`,
+          result.stdout && `stdout:\n${result.stdout}`,
+          result.code && `错误码: ${result.code}`,
+        ].filter(Boolean).join("\n\n");
+        alert(`启动失败\n\n${errorDetails}`);
+      }
+    } catch (error: any) {
+      console.error("启动失败: 网络错误", error);
+      alert(`启动失败: 网络错误\n\n${error.message || error}`);
+    } finally {
+      setStarting(false);
+    }
   };
 
   return (
@@ -121,6 +183,24 @@ export default function Home() {
           刷新数据
         </button>
       </header>
+
+      <div className={styles.startForm}>
+        <input
+          type="text"
+          value={newUrl}
+          onChange={(e) => setNewUrl(e.target.value)}
+          placeholder="输入小红书帖子 URL"
+          className={styles.urlInput}
+          disabled={starting}
+        />
+        <button
+          onClick={handleStart}
+          disabled={starting || !newUrl.trim()}
+          className={styles.startBtn}
+        >
+          {starting ? "启动中..." : "启动爬虫"}
+        </button>
+      </div>
 
       {loading && <div className={styles.loading}>加载中...</div>}
       {error && <div className={styles.error}>{error}</div>}
@@ -143,7 +223,7 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {dataList.map((item) => {
+              {dataList.map((item, index) => {
                 const post = item.data?.data?.post;
                 const author = item.data?.data?.author;
                 const stats = item.data?.data?.stats;
@@ -152,8 +232,8 @@ export default function Home() {
                 const isExpanded = expandedComments.has(key);
 
                 return (
-                  <>
-                    <tr key={key} className={styles.dataRow}>
+                  <React.Fragment key={key}>
+                    <tr className={styles.dataRow}>
                       <td className={styles.titleCol}>
                         <a href={item.data.extractedFrom} target="_blank" rel="noopener noreferrer" className={styles.titleLink}>
                           {post?.title || "无标题"}
@@ -218,7 +298,7 @@ export default function Home() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 );
               })}
             </tbody>
