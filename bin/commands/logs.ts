@@ -5,6 +5,8 @@ import * as path from "path";
 import * as os from "os";
 import { InstanceManager } from "../../src/utils/InstanceManager";
 import axios from "axios";
+import * as http from "http";
+import * as https from "https";
 
 export function registerLogsCommands(program: Command): void {
   program
@@ -40,13 +42,57 @@ Examples:
 
       // Remote instance: fetch logs via API
       if (instance.type === 'remote') {
+        const apiUrl = instanceManager.getInstanceUrl(instance);
+
         if (options.follow) {
-          console.error('Error: --follow is not supported for remote instances');
-          process.exit(1);
+          // Use SSE streaming endpoint for follow mode
+          const streamUrl = new URL(`${apiUrl}/api/logs/stream`);
+          streamUrl.searchParams.set('lines', String(lines));
+
+          const protocol = streamUrl.protocol === 'https:' ? https : http;
+
+          const req = protocol.get(streamUrl.toString(), (res) => {
+            if (res.statusCode !== 200) {
+              console.error(`Error: HTTP ${res.statusCode}`);
+              process.exit(1);
+            }
+
+            // Process SSE stream
+            let buffer = '';
+            res.on('data', (chunk: Buffer) => {
+              buffer += chunk.toString();
+              const lines = buffer.split('\n\n');
+              buffer = lines.pop() || '';
+
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  const data = line.substring(6);
+                  process.stdout.write(data);
+                }
+              }
+            });
+
+            res.on('end', () => {
+              process.exit(0);
+            });
+          });
+
+          req.on('error', (error: Error) => {
+            console.error(`Error: ${error.message}`);
+            process.exit(1);
+          });
+
+          // Handle Ctrl+C gracefully
+          process.on('SIGINT', () => {
+            req.destroy();
+            process.exit(0);
+          });
+
+          return;
         }
 
+        // Non-follow mode: regular API request
         try {
-          const apiUrl = instanceManager.getInstanceUrl(instance);
           const response = await axios.get(`${apiUrl}/api/logs`, {
             params: {
               lines: lines,
