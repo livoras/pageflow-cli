@@ -20,6 +20,7 @@ package-lock.json
 evals/deterministic/tests/BrowserContext/tmp-test.har
 lib/version.ts
 output/
+backup/
 
 # Temporary files
 /last-page.html
