@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       jobId,
-      message: "爬虫任务已启动",
+      message: "监控任务已启动",
       output: stdout,
     });
   } catch (error: any) {

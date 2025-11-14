@@ -98,7 +98,7 @@ export default function Home() {
   };
 
   const handleDelete = async (url: string) => {
-    if (!confirm(`确定要删除这条数据吗？\n\n这将同时删除对应的爬虫任务。`)) {
+    if (!confirm(`确定要删除这条数据吗？\n\n这将同时删除对应的监控任务。`)) {
       return;
     }
 
@@ -160,8 +160,8 @@ export default function Home() {
 
       if (result.success) {
         const message = result.jobId
-          ? `爬虫任务已启动\nJob ID: ${result.jobId}`
-          : "爬虫任务已启动";
+          ? `监控任务已启动\nJob ID: ${result.jobId}`
+          : "监控任务已启动";
         alert(message);
         setNewUrl("");
       } else {
@@ -186,7 +186,7 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>小红书数据监控</h1>
+        <h1>小红书笔记数据监控</h1>
         <button onClick={() => fetchData(true)} className={styles.refreshBtn}>
           刷新数据
         </button>
@@ -206,7 +206,7 @@ export default function Home() {
           disabled={starting || !newUrl.trim()}
           className={styles.startBtn}
         >
-          {starting ? "启动中..." : "启动爬虫"}
+          {starting ? "启动中..." : "启动监控"}
         </button>
       </div>
 
