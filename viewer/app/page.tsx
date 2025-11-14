@@ -18,6 +18,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
 
   const fetchData = async (showLoading = false) => {
     try {
@@ -86,6 +87,32 @@ export default function Home() {
     return <span className={className}> ({sign}{change})</span>;
   };
 
+  const handleDelete = async (url: string) => {
+    if (!confirm(`确定要删除这条数据吗？\n\n这将同时停止对应的爬虫任务。`)) {
+      return;
+    }
+
+    setDeleting(prev => new Set(prev).add(url));
+
+    const response = await fetch(`/api/xiaohongshu/delete?url=${encodeURIComponent(url)}`, {
+      method: "DELETE",
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      await fetchData(false);
+    } else {
+      alert("删除失败");
+    }
+
+    setDeleting(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(url);
+      return newSet;
+    });
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -128,7 +155,7 @@ export default function Home() {
                   <>
                     <tr key={key} className={styles.dataRow}>
                       <td className={styles.titleCol}>
-                        <a href={post?.url} target="_blank" rel="noopener noreferrer" className={styles.titleLink}>
+                        <a href={item.data.extractedFrom} target="_blank" rel="noopener noreferrer" className={styles.titleLink}>
                           {post?.title || "无标题"}
                         </a>
                       </td>
@@ -155,9 +182,13 @@ export default function Home() {
                         </button>
                       </td>
                       <td>
-                        <a href={post?.url} target="_blank" rel="noopener noreferrer" className={styles.actionLink}>
-                          查看原文
-                        </a>
+                        <button
+                          onClick={() => handleDelete(key)}
+                          disabled={deleting.has(key)}
+                          className={styles.deleteBtn}
+                        >
+                          {deleting.has(key) ? "删除中..." : "删除"}
+                        </button>
                       </td>
                     </tr>
                     {isExpanded && comments.length > 0 && (

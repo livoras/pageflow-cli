@@ -134,6 +134,10 @@
   color: #666;
 }
 
+.table td:nth-child(8) {
+  text-align: center;
+}
+
 .titleCol {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -208,6 +212,26 @@
 
 .actionLink:hover {
   color: #ff2442;
+}
+
+.deleteBtn {
+  padding: 4px 12px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.deleteBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .commentsRow {

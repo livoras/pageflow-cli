@@ -97,6 +97,12 @@ class DataStore {
       (a, b) => b.timestamp.localeCompare(a.timestamp)
     );
   }
+
+  deleteData(url: string): void {
+    const cache = this.loadFromFile();
+    cache.delete(url);
+    this.saveToFile(cache);
+  }
 }
 
 export const dataStore = new DataStore();
