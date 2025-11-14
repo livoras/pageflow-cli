@@ -114,8 +114,8 @@ export class SimplePageServer {
     await this.jobManager.initialize();
 
     // Start HTTP server
-    this.httpServer = this.app.listen(this.port, () => {
-      console.log(`SimplePageServer running on http://localhost:${this.port}`);
+    this.httpServer = this.app.listen(this.port, '0.0.0.0', () => {
+      console.log(`SimplePageServer running on http://0.0.0.0:${this.port}`);
       console.log(`User data directory: ${this.userDataDir}`);
       console.log(`File-based storage enabled`);
     });

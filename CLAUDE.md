@@ -123,6 +123,12 @@ export DISPLAY=:99
 ./pageflow jobs config abc123 --key targetUrl --value "http://example.com" --use tago
 ```
 
+## 核心原则
+
+**运行测试的目的是为了发现 pageflow 的问题，而不是为了得到运行结果。**
+
+所有的运行都是为了检测和测试 pageflow 的问题。专注于运行中所呈现的 pageflow 的设计缺陷、架构问题和 bug，而不是仅仅让功能"能用"。
+
 ## 开发规则
 
 - 代码输出的临时内容放到 `output/` 目录

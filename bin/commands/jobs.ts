@@ -120,6 +120,43 @@ Examples:
     });
 
   jobs
+    .command("show <id>")
+    .description("Show job details")
+    .option("--use <name>", "Use specific named instance")
+    .action(async (id, options) => {
+      const instanceManager = new InstanceManager();
+      const { instance, apiEndpoint } = await findJobInstance(instanceManager, id, options.use);
+
+      try {
+        const response = await axios.get(`${apiEndpoint}/api/jobs/${id}`);
+        const job = response.data;
+
+        console.log(`\nJob Details (Instance: ${instance.name}):\n`);
+        console.log(`ID:                 ${job.id}`);
+        console.log(`Type:               ${job.type}`);
+        console.log(`Name:               ${job.name}`);
+        console.log(`Status:             ${job.enabled ? "Running" : "Stopped"}`);
+        console.log(`Interval:           ${job.interval}s`);
+        console.log(`Run Count:          ${job.runCount}`);
+        console.log(`Last Run:           ${job.lastRunAt ? new Date(job.lastRunAt).toISOString() : "never"}`);
+        console.log(`Created:            ${new Date(job.createdAt).toISOString()}`);
+        console.log(`Webhook Success:    ${job.webhookSuccessCount || 0}`);
+        console.log(`Webhook Failure:    ${job.webhookFailureCount || 0}`);
+        console.log(`\nConfiguration:\n`);
+        console.log(JSON.stringify(job.config, null, 2));
+      } catch (error: any) {
+        if (error.response) {
+          console.error(
+            `Error: HTTP ${error.response.status} - ${error.response.data?.error || error.message}`,
+          );
+        } else {
+          console.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  jobs
     .command("list")
     .description("List all jobs")
     .option("--use <name>", "Use specific named instance")
