@@ -18,6 +18,7 @@ import { registerBrowserCommands } from "./commands/browser";
 import { registerCookiesCommands } from "./commands/cookies";
 import { registerExtractionCommands } from "./commands/extraction";
 import { registerJobsCommands } from "./commands/jobs";
+import { registerLogsCommands } from "./commands/logs";
 
 // ============================================================================
 // Types
@@ -308,13 +309,37 @@ async function startServer(options: {
 
   // Kill the temporary process and spawn with correct env
   process.kill(child.pid!);
+
+  // Create logs directory and log file
+  const logsDir = path.join(userDataDir, '..', 'logs');
+  if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+  }
+
+  const timestamp = new Date().toISOString().replace(/:/g, '-').split('.')[0];
+  const logFile = path.join(logsDir, `${timestamp}.log`);
+  const latestLink = path.join(logsDir, 'latest.log');
+
+  // Open log file for writing
+  const logStream = fs.openSync(logFile, 'a');
+
   const finalChild = spawn(runtime, [serverScript], {
     detached: true,
-    stdio: "ignore",
+    stdio: ['ignore', logStream, logStream],  // stdout and stderr to log file
     env: updatedEnv,
   });
 
   finalChild.unref();
+
+  // Create/update latest.log symlink
+  try {
+    if (fs.existsSync(latestLink)) {
+      fs.unlinkSync(latestLink);
+    }
+    fs.symlinkSync(path.basename(logFile), latestLink);
+  } catch (e) {
+    // Ignore symlink creation errors
+  }
 
   // Update instance with final PID
   instanceManager.removeInstance(instanceName);
@@ -1020,6 +1045,9 @@ Note:
 
   // Jobs commands (create/list/start/stop/delete)
   registerJobsCommands(program);
+
+  // Logs commands (log)
+  registerLogsCommands(program);
 
   program.parse();
 }

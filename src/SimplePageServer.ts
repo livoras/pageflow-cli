@@ -12,6 +12,7 @@ import { HealthRoutes } from "./routes/HealthRoutes";
 import { PageRoutes } from "./routes/PageRoutes";
 import { ExtractionRoutes } from "./routes/ExtractionRoutes";
 import { JobRoutes } from "./routes/JobRoutes";
+import { LogRoutes } from "./routes/LogRoutes";
 import { ServerService } from "./services/ServerService";
 import { JobManager } from "./jobs/JobManager";
 
@@ -76,6 +77,12 @@ export class SimplePageServer {
       new JobRoutes(
         this.stateManager,
         this.jobManager,
+      ),
+    );
+    this.routeRegistry.addHandler(
+      new LogRoutes(
+        this.stateManager,
+        this.instanceName,
       ),
     );
 
