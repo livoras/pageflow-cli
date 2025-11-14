@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    dataStore.setXiaohongshuData(body);
+    dataStore.setData(body);
 
     console.log(`[${new Date().toISOString()}] Received xiaohongshu webhook`);
     console.log(`Data size: ${JSON.stringify(body).length} bytes`);
