@@ -26,9 +26,41 @@ interface ExtractResult {
   error?: string;
 }
 
+interface ApiResponse {
+  success: boolean;
+  html?: string;
+  extractions?: ExtractionTemplate[];
+  error?: string;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+async function getHtml(url: string, apiEndpoint: string): Promise<string> {
+  console.error("Fetching HTML...");
+  console.error(`- URL: ${url}`);
+  console.error(`- Server: ${apiEndpoint}`);
+
+  const response = await axios.post<ApiResponse>(
+    `${apiEndpoint}/api/html`,
+    { url },
+    {
+      headers: { "Content-Type": "application/json" },
+      timeout: 60000,
+    },
+  );
+
+  if (response.data.success && response.data.html) {
+    const html = response.data.html;
+    console.error(`Fetch successful! HTML size: ${html.length} characters`);
+    return html;
+  } else {
+    const errorMsg = response.data.error || "Unknown error";
+    console.error(`Fetch failed: ${errorMsg}`);
+    process.exit(1);
+  }
+}
 
 async function sendWebhook(url: string, data: any): Promise<void> {
   try {
