@@ -105,4 +105,42 @@ class DataStore {
   }
 }
 
+class NotificationStore {
+  private notifiedFile: string;
+
+  constructor() {
+    this.notifiedFile = path.join(process.cwd(), "data", "notified.json");
+  }
+
+  private loadNotified(): Set<string> {
+    if (fs.existsSync(this.notifiedFile)) {
+      const content = fs.readFileSync(this.notifiedFile, "utf-8");
+      const data = JSON.parse(content);
+      return new Set(data.notified || []);
+    }
+    return new Set();
+  }
+
+  private saveNotified(notified: Set<string>): void {
+    const dir = path.dirname(this.notifiedFile);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    const data = { notified: Array.from(notified) };
+    fs.writeFileSync(this.notifiedFile, JSON.stringify(data, null, 2), "utf-8");
+  }
+
+  isNotified(url: string): boolean {
+    const notified = this.loadNotified();
+    return notified.has(url);
+  }
+
+  markAsNotified(url: string): void {
+    const notified = this.loadNotified();
+    notified.add(url);
+    this.saveNotified(notified);
+  }
+}
+
 export const dataStore = new DataStore();
+export const notificationStore = new NotificationStore();
