@@ -25,3 +25,9 @@ output/
 /last-page.html
 /test-page.html
 *.log
+
+# Next.js (viewer project)
+viewer/node_modules/
+viewer/.next/
+viewer/out/
+viewer/.env*.local

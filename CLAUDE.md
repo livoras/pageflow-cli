@@ -102,6 +102,27 @@ export DISPLAY=:99
 ./pageflow extract-html <html-file> <schema-json>
 ```
 
+## Job 管理
+
+### 查看和配置 Job
+```bash
+# 查看所有 job 状态
+./pageflow jobs list --use <instance-name>
+
+# 配置 job（使用 --key 和 --value）
+./pageflow jobs config <job-id> --key <key> --value <value> --use <instance-name>
+
+# 例：配置 webhook URL
+./pageflow jobs config cm1fpc --key webhookUrl --value "http://100.94.195.92:9999/api/xiaohongshu/webhook" --use tago
+./pageflow jobs config fskqhv --key webhookUrl --value "http://100.94.195.92:9999/api/baidu/webhook" --use tago
+
+# 例：配置提取间隔（分钟）
+./pageflow jobs config abc123 --key interval --value "10" --use tago
+
+# 例：配置目标 URL
+./pageflow jobs config abc123 --key targetUrl --value "http://example.com" --use tago
+```
+
 ## 开发规则
 
 - 代码输出的临时内容放到 `output/` 目录
