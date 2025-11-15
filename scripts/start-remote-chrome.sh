@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # Remote Chrome configuration
-# 根据参数选择服务器
-if [ "$1" = "tago" ]; then
-    REMOTE_HOST="100.91.155.104"
+# 根据参数选择服务器（默认 tago）
+if [ "$1" = "free-server" ]; then
+    REMOTE_HOST="100.74.12.43"
     REMOTE_USER="root"
 else
-    REMOTE_HOST="100.74.12.43"
+    # 默认连接 tago
+    REMOTE_HOST="100.91.155.104"
     REMOTE_USER="root"
 fi
 
