@@ -11,7 +11,13 @@ interface NotificationData {
 
 export async function sendWeChatNotification(data: NotificationData): Promise<boolean> {
   const settings = settingsStore.getSettings();
-  const WECHAT_WEBHOOK_URL = settings.wechatWebhookUrl;
+  const webhookUrls = settings.wechatWebhookUrls;
+
+  if (!webhookUrls || webhookUrls.length === 0) {
+    console.log("未配置企业微信 Webhook URL，跳过通知");
+    return false;
+  }
+
   const message = {
     msgtype: "markdown",
     markdown: {
@@ -27,26 +33,37 @@ ${data.collects ? `**收藏**: ${data.collects}` : ""}
     }
   };
 
-  try {
-    const response = await fetch(WECHAT_WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(message),
-    });
+  const sendToWebhook = async (url: string) => {
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (result.errcode === 0) {
-      console.log("企业微信通知发送成功:", data.title);
-      return true;
-    } else {
-      console.error("企业微信通知发送失败:", result);
+      if (result.errcode === 0) {
+        console.log(`企业微信通知发送成功 (${url}):`, data.title);
+        return true;
+      } else {
+        console.error(`企业微信通知发送失败 (${url}):`, result);
+        return false;
+      }
+    } catch (error) {
+      console.error(`发送企业微信通知时出错 (${url}):`, error);
       return false;
     }
-  } catch (error) {
-    console.error("发送企业微信通知时出错:", error);
-    return false;
-  }
+  };
+
+  const results = await Promise.allSettled(
+    webhookUrls.map(url => sendToWebhook(url))
+  );
+
+  const successCount = results.filter(r => r.status === 'fulfilled' && r.value === true).length;
+  console.log(`企业微信通知发送完成: ${successCount}/${webhookUrls.length} 成功`);
+
+  return successCount > 0;
 }

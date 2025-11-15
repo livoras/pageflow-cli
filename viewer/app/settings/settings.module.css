@@ -122,3 +122,45 @@
   margin-bottom: 16px;
   font-size: 14px;
 }
+
+.webhookUrlRow {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.webhookUrlRow .input {
+  flex: 1;
+}
+
+.removeBtn {
+  padding: 10px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.removeBtn:hover {
+  background: #dc2626;
+}
+
+.addBtn {
+  padding: 10px 16px;
+  background: #1a1a1a;
+  color: white;
+  border: 1px solid #333;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.addBtn:hover {
+  background: #2a2a2a;
+  border-color: #444;
+}

@@ -5,7 +5,7 @@ import styles from "./settings.module.css";
 
 interface Settings {
   interval: number;
-  wechatWebhookUrl: string;
+  wechatWebhookUrls: string[];
   likesThreshold: number;
   commentsThreshold: number;
   maxJobs: number;
@@ -14,7 +14,7 @@ interface Settings {
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>({
     interval: 10,
-    wechatWebhookUrl: "",
+    wechatWebhookUrls: [],
     likesThreshold: 20,
     commentsThreshold: 10,
     maxJobs: 10,
@@ -77,6 +77,27 @@ export default function SettingsPage() {
     }));
   };
 
+  const handleAddWebhookUrl = () => {
+    setSettings((prev) => ({
+      ...prev,
+      wechatWebhookUrls: [...prev.wechatWebhookUrls, ""],
+    }));
+  };
+
+  const handleWebhookUrlChange = (index: number, value: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      wechatWebhookUrls: prev.wechatWebhookUrls.map((url, i) => i === index ? value : url),
+    }));
+  };
+
+  const handleRemoveWebhookUrl = (index: number) => {
+    setSettings((prev) => ({
+      ...prev,
+      wechatWebhookUrls: prev.wechatWebhookUrls.filter((_, i) => i !== index),
+    }));
+  };
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -112,13 +133,31 @@ export default function SettingsPage() {
 
         <div className={styles.formGroup}>
           <label className={styles.label}>企业微信 Webhook URL</label>
-          <input
-            type="text"
-            value={settings.wechatWebhookUrl}
-            onChange={(e) => handleChange("wechatWebhookUrl", e.target.value)}
-            className={styles.input}
-            placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
-          />
+          {settings.wechatWebhookUrls.map((url, index) => (
+            <div key={index} className={styles.webhookUrlRow}>
+              <input
+                type="text"
+                value={url}
+                onChange={(e) => handleWebhookUrlChange(index, e.target.value)}
+                className={styles.input}
+                placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+              />
+              <button
+                type="button"
+                onClick={() => handleRemoveWebhookUrl(index)}
+                className={styles.removeBtn}
+              >
+                删除
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={handleAddWebhookUrl}
+            className={styles.addBtn}
+          >
+            添加 Webhook URL
+          </button>
         </div>
 
         <div className={styles.formGroup}>

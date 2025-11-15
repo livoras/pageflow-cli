@@ -3,7 +3,7 @@ import path from "path";
 
 export interface Settings {
   interval: number;
-  wechatWebhookUrl: string;
+  wechatWebhookUrls: string[];
   likesThreshold: number;
   commentsThreshold: number;
   maxJobs: number;
@@ -11,7 +11,7 @@ export interface Settings {
 
 const DEFAULT_SETTINGS: Settings = {
   interval: 10,
-  wechatWebhookUrl: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d18c52a5-f561-4ec6-8482-fdc8b94f36ec",
+  wechatWebhookUrls: ["https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=d18c52a5-f561-4ec6-8482-fdc8b94f36ec"],
   likesThreshold: 20,
   commentsThreshold: 10,
   maxJobs: 10,
@@ -41,7 +41,19 @@ class SettingsStore {
   getSettings(): Settings {
     this.ensureSettingsFile();
     const content = fs.readFileSync(this.settingsFile, "utf-8");
-    return JSON.parse(content);
+    const settings = JSON.parse(content);
+
+    if ('wechatWebhookUrl' in settings && typeof settings.wechatWebhookUrl === 'string') {
+      settings.wechatWebhookUrls = [settings.wechatWebhookUrl];
+      delete settings.wechatWebhookUrl;
+      fs.writeFileSync(
+        this.settingsFile,
+        JSON.stringify(settings, null, 2),
+        "utf-8"
+      );
+    }
+
+    return settings;
   }
 
   updateSettings(updates: Partial<Settings>): Settings {
