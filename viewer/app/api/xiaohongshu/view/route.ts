@@ -4,7 +4,7 @@ import { dataStore } from "@/lib/store";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  const data = dataStore.getData();
+  const data = await dataStore.getData();
 
   if (data.length === 0) {
     return NextResponse.json({ message: "No data yet" });

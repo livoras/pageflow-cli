@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { query, queryOne, execute } from "./db";
 import { settingsStore } from "./settings";
 
 interface WebhookData {
@@ -14,46 +13,21 @@ interface WebhookData {
 }
 
 class DataStore {
-  private dataFile: string;
-
-  constructor() {
-    this.dataFile = path.join(process.cwd(), "data", "xiaohongshu.json");
-  }
-
-  private loadFromFile(): Map<string, WebhookData> {
-    const cache = new Map<string, WebhookData>();
-    if (fs.existsSync(this.dataFile)) {
-      const content = fs.readFileSync(this.dataFile, "utf-8");
-      const dataArray: WebhookData[] = JSON.parse(content);
-      dataArray.forEach((item) => {
-        const url = item.data.extractedFrom || "unknown";
-        cache.set(url, item);
-      });
-    }
-    return cache;
-  }
-
-  private saveToFile(cache: Map<string, WebhookData>): void {
-    const dataArray = Array.from(cache.values());
-    const dir = path.dirname(this.dataFile);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(this.dataFile, JSON.stringify(dataArray, null, 2), "utf-8");
-  }
-
-  setData(data: any): void {
+  async setData(data: any): Promise<void> {
     const url = data.extractedFrom || "unknown";
-    const cache = this.loadFromFile();
-    const oldData = cache.get(url);
+    const type = "xiaohongshu";
+
+    // 获取首次快照数据用于计算 changes（相对于基准线的增量）
+    const firstSnapshot = await this.getFirstSnapshot(url);
 
     let changes: { likes?: number; collects?: number; comments?: number } | undefined;
 
-    if (oldData) {
-      const oldStats = oldData.data?.data?.stats;
+    if (firstSnapshot) {
+      const firstData = firstSnapshot.data;
+      const firstStats = firstData?.data?.stats;
       const newStats = data?.data?.stats;
 
-      if (oldStats && newStats) {
+      if (firstStats && newStats) {
         const isAbbreviated = (val: any) => {
           if (!val) return false;
           const str = val.toString();
@@ -66,11 +40,11 @@ class DataStore {
           return parseInt(str) || 0;
         };
 
-        const oldLikes = extractNum(oldStats.likes);
+        const firstLikes = extractNum(firstStats.likes);
         const newLikes = extractNum(newStats.likes);
-        const oldCollects = extractNum(oldStats.collects);
+        const firstCollects = extractNum(firstStats.collects);
         const newCollects = extractNum(newStats.collects);
-        const oldComments = extractNum(oldStats.total_comments);
+        const firstComments = extractNum(firstStats.total_comments);
         const newComments = extractNum(newStats.total_comments);
 
         const likesAbbrev = isAbbreviated(newStats.likes);
@@ -78,71 +52,91 @@ class DataStore {
         const commentsAbbrev = isAbbreviated(newStats.total_comments);
 
         changes = {
-          likes: likesAbbrev ? undefined : newLikes - oldLikes,
-          collects: collectsAbbrev ? undefined : newCollects - oldCollects,
-          comments: commentsAbbrev ? undefined : newComments - oldComments,
+          likes: likesAbbrev ? undefined : newLikes - firstLikes,
+          collects: collectsAbbrev ? undefined : newCollects - firstCollects,
+          comments: commentsAbbrev ? undefined : newComments - firstComments,
         };
       }
     }
 
-    const settings = settingsStore.getSettings();
-    cache.set(url, {
+    const settings = await settingsStore.getSettings();
+
+    // 构造完整的数据结构
+    const fullData = {
       timestamp: new Date().toISOString(),
       data,
       interval: settings.interval,
       changes,
-    });
-    this.saveToFile(cache);
-  }
+    };
 
-  getData(): WebhookData[] {
-    const cache = this.loadFromFile();
-    return Array.from(cache.values()).sort(
-      (a, b) => b.timestamp.localeCompare(a.timestamp)
+    // 始终插入新记录（保留历史）
+    await execute(
+      `INSERT INTO snapshots (url, type, data, created_at, updated_at)
+       VALUES (?, ?, ?, NOW(), NOW())`,
+      [url, type, JSON.stringify(fullData)]
     );
   }
 
-  deleteData(url: string): void {
-    const cache = this.loadFromFile();
-    cache.delete(url);
-    this.saveToFile(cache);
+  async getData(): Promise<WebhookData[]> {
+    // 获取每个 URL 的最新一条记录
+    const rows = await query<{ data: any }>(
+      `SELECT s1.data
+       FROM snapshots s1
+       INNER JOIN (
+         SELECT url, MAX(id) as max_id
+         FROM snapshots
+         GROUP BY url
+       ) s2 ON s1.url = s2.url AND s1.id = s2.max_id
+       ORDER BY s1.created_at DESC`
+    );
+
+    // mysql2 的 JSON 字段自动解析为对象，不需要 JSON.parse
+    return rows.map(row => row.data);
+  }
+
+  async deleteData(url: string): Promise<void> {
+    await execute("DELETE FROM snapshots WHERE url = ?", [url]);
+  }
+
+  async getHistory(url: string, limit: number = 100): Promise<WebhookData[]> {
+    const rows = await query<{ data: any }>(
+      `SELECT data FROM snapshots
+       WHERE url = ?
+       ORDER BY created_at DESC
+       LIMIT ${limit}`,
+      [url]
+    );
+
+    return rows.map(row => row.data);
+  }
+
+  async getFirstSnapshot(url: string): Promise<WebhookData | null> {
+    const row = await queryOne<{ data: any }>(
+      `SELECT data FROM snapshots
+       WHERE url = ?
+       ORDER BY created_at ASC
+       LIMIT 1`,
+      [url]
+    );
+
+    return row ? row.data : null;
   }
 }
 
 class NotificationStore {
-  private notifiedFile: string;
-
-  constructor() {
-    this.notifiedFile = path.join(process.cwd(), "data", "notified.json");
+  async isNotified(url: string): Promise<boolean> {
+    const row = await queryOne<{ notified_at: Date | null }>(
+      "SELECT notified_at FROM snapshots WHERE url = ?",
+      [url]
+    );
+    return row?.notified_at != null;
   }
 
-  private loadNotified(): Set<string> {
-    if (fs.existsSync(this.notifiedFile)) {
-      const content = fs.readFileSync(this.notifiedFile, "utf-8");
-      const data = JSON.parse(content);
-      return new Set(data.notified || []);
-    }
-    return new Set();
-  }
-
-  private saveNotified(notified: Set<string>): void {
-    const dir = path.dirname(this.notifiedFile);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    const data = { notified: Array.from(notified) };
-    fs.writeFileSync(this.notifiedFile, JSON.stringify(data, null, 2), "utf-8");
-  }
-
-  isNotified(url: string): boolean {
-    const notified = this.loadNotified();
-    return notified.has(url);
-  }
-
-  markAsNotified(url: string): void {
-    const notified = this.loadNotified();
-    notified.add(url);
-    this.saveNotified(notified);
+  async markAsNotified(url: string): Promise<void> {
+    await execute(
+      "UPDATE snapshots SET notified_at = NOW() WHERE url = ?",
+      [url]
+    );
   }
 }
 

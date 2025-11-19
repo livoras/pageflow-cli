@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const settings = settingsStore.getSettings();
+    const settings = await settingsStore.getSettings();
     return NextResponse.json(settings);
   } catch (error: any) {
     console.error("获取配置失败:", error);
@@ -19,7 +19,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const updates = await request.json();
-    const settings = settingsStore.updateSettings(updates);
+    const settings = await settingsStore.updateSettings(updates);
     console.log("配置已更新:", settings);
     return NextResponse.json({
       success: true,

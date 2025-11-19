@@ -22,6 +22,9 @@ export default function Home() {
   const [deleting, setDeleting] = useState<Set<string>>(new Set());
   const [newUrl, setNewUrl] = useState("");
   const [starting, setStarting] = useState(false);
+  const [chartModalUrl, setChartModalUrl] = useState<string | null>(null);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [loadingChart, setLoadingChart] = useState(false);
 
   const fetchData = async (showLoading = false) => {
     try {
@@ -183,6 +186,27 @@ export default function Home() {
     }
   };
 
+  const handleOpenChart = async (url: string) => {
+    setChartModalUrl(url);
+    setLoadingChart(true);
+
+    try {
+      const response = await fetch(`/api/xiaohongshu/history?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      setChartData(data);
+    } catch (error) {
+      console.error("加载图表数据失败:", error);
+      setChartData([]);
+    } finally {
+      setLoadingChart(false);
+    }
+  };
+
+  const handleCloseChart = () => {
+    setChartModalUrl(null);
+    setChartData([]);
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -229,6 +253,7 @@ export default function Home() {
                 <th>点赞</th>
                 <th>收藏</th>
                 <th>评论</th>
+                <th>图表</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -274,6 +299,14 @@ export default function Home() {
                       </td>
                       <td>
                         <button
+                          onClick={() => handleOpenChart(key)}
+                          className={styles.chartBtn}
+                        >
+                          查看
+                        </button>
+                      </td>
+                      <td>
+                        <button
                           onClick={() => handleDelete(key)}
                           disabled={deleting.has(key)}
                           className={styles.deleteBtn}
@@ -284,7 +317,7 @@ export default function Home() {
                     </tr>
                     {isExpanded && comments.length > 0 && (
                       <tr key={`${key}-comments`} className={styles.commentsRow}>
-                        <td colSpan={8}>
+                        <td colSpan={10}>
                           <div className={styles.commentsList}>
                             {comments.slice(0, 5).map((comment: any, idx: number) => (
                               <div key={idx} className={styles.commentItem}>
@@ -317,6 +350,128 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {chartModalUrl && (
+        <div className={styles.modal} onClick={handleCloseChart}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h2>数据趋势图表</h2>
+              <button onClick={handleCloseChart} className={styles.closeBtn}>×</button>
+            </div>
+            <div className={styles.modalBody}>
+              {loadingChart ? (
+                <div className={styles.loading}>加载中...</div>
+              ) : chartData.length === 0 ? (
+                <div className={styles.noData}>暂无历史数据</div>
+              ) : (
+                <ChartComponent data={chartData} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function ChartComponent({ data }: { data: any[] }) {
+  const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = require("recharts");
+
+  console.log('[ChartComponent] 原始数据:', data);
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return `${date.getMonth() + 1}-${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+  };
+
+  const formattedData = data.map((item, index) => {
+    const formatted = {
+      time: formatTime(item.timestamp),
+      likes: item.likes,
+      collects: item.collects,
+      comments: item.comments
+    };
+    console.log(`[ChartComponent] 数据点 ${index}:`, formatted);
+    return formatted;
+  });
+
+  console.log('[ChartComponent] 格式化后的数据总数:', formattedData.length);
+  console.log('[ChartComponent] 第一个数据点:', formattedData[0]);
+  console.log('[ChartComponent] 最后一个数据点:', formattedData[formattedData.length - 1]);
+
+  return (
+    <ResponsiveContainer width="100%" height={450}>
+      <LineChart
+        data={formattedData}
+        margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+      >
+        <defs>
+          <linearGradient id="colorLikes" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+          </linearGradient>
+          <linearGradient id="colorCollects" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+          </linearGradient>
+          <linearGradient id="colorComments" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <XAxis
+          dataKey="time"
+          tick={{ fontSize: 12, fill: '#666' }}
+          stroke="#d1d5db"
+        />
+        <YAxis
+          tick={{ fontSize: 12, fill: '#666' }}
+          stroke="#d1d5db"
+        />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          }}
+        />
+        <Legend
+          wrapperStyle={{ paddingTop: '20px' }}
+          iconType="circle"
+        />
+        <Line
+          type="monotone"
+          dataKey="likes"
+          stroke="#6366f1"
+          strokeWidth={3}
+          dot={{ fill: '#6366f1', r: 4 }}
+          activeDot={{ r: 6 }}
+          name="点赞"
+          fill="url(#colorLikes)"
+        />
+        <Line
+          type="monotone"
+          dataKey="collects"
+          stroke="#10b981"
+          strokeWidth={3}
+          dot={{ fill: '#10b981', r: 4 }}
+          activeDot={{ r: 6 }}
+          name="收藏"
+          fill="url(#colorCollects)"
+        />
+        <Line
+          type="monotone"
+          dataKey="comments"
+          stroke="#f59e0b"
+          strokeWidth={3}
+          dot={{ fill: '#f59e0b', r: 4 }}
+          activeDot={{ r: 6 }}
+          name="评论"
+          fill="url(#colorComments)"
+        />
+      </LineChart>
+    </ResponsiveContainer>
   );
 }

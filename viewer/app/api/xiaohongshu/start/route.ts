@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "URL is required" }, { status: 400 });
     }
 
-    const settings = settingsStore.getSettings();
+    const settings = await settingsStore.getSettings();
 
     const { stdout: jobsOutput } = await execAsync("pageflow jobs list --use tago");
     const runningJobsCount = (jobsOutput.match(/Running/g) || []).length;
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const webhookUrl = "http://8.155.175.166:7005/api/xiaohongshu/webhook";
+    const webhookUrl = "http://8.155.175.166:7006/api/xiaohongshu/webhook";
     const extractionId = "24";
     const interval = settings.interval.toString();
 

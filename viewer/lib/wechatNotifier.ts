@@ -7,16 +7,23 @@ interface NotificationData {
   comments: number;
   collects?: number;
   author?: string;
+  likesIncrement?: number;
+  commentsIncrement?: number;
+  collectsIncrement?: number;
 }
 
 export async function sendWeChatNotification(data: NotificationData): Promise<boolean> {
-  const settings = settingsStore.getSettings();
+  const settings = await settingsStore.getSettings();
   const webhookUrls = settings.wechatWebhookUrls;
 
   if (!webhookUrls || webhookUrls.length === 0) {
     console.log("未配置企业微信 Webhook URL，跳过通知");
     return false;
   }
+
+  const formatWithIncrement = (value: number, increment?: number) => {
+    return increment ? `${value} <font color="warning">(+${increment})</font>` : `${value}`;
+  };
 
   const message = {
     msgtype: "markdown",
@@ -25,9 +32,9 @@ export async function sendWeChatNotification(data: NotificationData): Promise<bo
 
 **标题**: ${data.title}
 **作者**: ${data.author || "未知"}
-**点赞**: <font color="warning">${data.likes}</font>
-**评论**: <font color="info">${data.comments}</font>
-${data.collects ? `**收藏**: ${data.collects}` : ""}
+**点赞**: <font color="warning">${formatWithIncrement(data.likes, data.likesIncrement)}</font>
+**评论**: <font color="info">${formatWithIncrement(data.comments, data.commentsIncrement)}</font>
+${data.collects ? `**收藏**: ${formatWithIncrement(data.collects, data.collectsIncrement)}` : ""}
 
 [查看详情](${data.url})`
     }

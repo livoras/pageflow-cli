@@ -1,0 +1,16 @@
+{
+  "extractedFrom": "https://www.xiaohongshu.com/explore/test123",
+  "data": {
+    "post": {
+      "title": "测试笔记标题"
+    },
+    "author": {
+      "name": "测试作者"
+    },
+    "stats": {
+      "likes": "55",
+      "total_comments": "25",
+      "collects": "10"
+    }
+  }
+}

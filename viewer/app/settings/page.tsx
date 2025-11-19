@@ -9,6 +9,8 @@ interface Settings {
   likesThreshold: number;
   commentsThreshold: number;
   maxJobs: number;
+  likesIncrement: number;
+  commentsIncrement: number;
 }
 
 export default function SettingsPage() {
@@ -18,6 +20,8 @@ export default function SettingsPage() {
     likesThreshold: 20,
     commentsThreshold: 10,
     maxJobs: 10,
+    likesIncrement: 10,
+    commentsIncrement: 5,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -190,6 +194,34 @@ export default function SettingsPage() {
             onChange={(e) => handleChange("maxJobs", parseInt(e.target.value))}
             className={styles.input}
             min="1"
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.label}>
+            点赞增量阈值
+            <span className={styles.hint}>点赞数增量超过此值时触发通知</span>
+          </label>
+          <input
+            type="number"
+            value={settings.likesIncrement}
+            onChange={(e) => handleChange("likesIncrement", parseInt(e.target.value))}
+            className={styles.input}
+            min="0"
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label className={styles.label}>
+            评论增量阈值
+            <span className={styles.hint}>评论数增量超过此值时触发通知</span>
+          </label>
+          <input
+            type="number"
+            value={settings.commentsIncrement}
+            onChange={(e) => handleChange("commentsIncrement", parseInt(e.target.value))}
+            className={styles.input}
+            min="0"
           />
         </div>
 
