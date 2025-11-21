@@ -13,6 +13,7 @@ import { PageRoutes } from "./routes/PageRoutes";
 import { ExtractionRoutes } from "./routes/ExtractionRoutes";
 import { JobRoutes } from "./routes/JobRoutes";
 import { LogRoutes } from "./routes/LogRoutes";
+import { A11yRoutes } from "./routes/A11yRoutes";
 import { ServerService } from "./services/ServerService";
 import { JobManager } from "./jobs/JobManager";
 
@@ -83,6 +84,12 @@ export class SimplePageServer {
       new LogRoutes(
         this.stateManager,
         this.instanceName,
+      ),
+    );
+    this.routeRegistry.addHandler(
+      new A11yRoutes(
+        this.stateManager,
+        this.pageServiceInstance,
       ),
     );
 
@@ -291,8 +298,9 @@ export class SimplePageServer {
         fs.mkdirSync(this.userDataDir, { recursive: true });
       }
 
-      // Force use of full chromium instead of headless_shell in headless mode
+      // Use Google Chrome instead of Chromium
       const launchOptions: any = {
+        channel: 'chrome', // Use system Google Chrome
         headless: this.headless,
         args: [
             // Anti-automation detection
@@ -331,18 +339,6 @@ export class SimplePageServer {
             "--disable-features=UserAgentClientHint",
           ],
       };
-
-      // Force use of full chromium instead of headless_shell
-      if (this.headless) {
-        const homeDir = os.homedir();
-        const chromiumPath = path.join(
-          homeDir,
-          ".cache/ms-playwright/chromium-1194/chrome-linux/chrome",
-        );
-        if (fs.existsSync(chromiumPath)) {
-          launchOptions.executablePath = chromiumPath;
-        }
-      }
 
       this.persistentContext =
         await playwright.chromium.launchPersistentContext(

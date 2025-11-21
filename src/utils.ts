@@ -81,11 +81,13 @@ export function cleanText(input: string): string {
  *
  * @param node - The accessibility node to format, optionally with an encodedId.
  * @param level - The current depth level for indentation (used internally).
+ * @param idToUrl - Optional mapping of EncodedId to URL for links/images/videos.
  * @returns A string representation of the node and its descendants, with one node per line.
  */
 export function formatSimplifiedTree(
   node: AccessibilityNode & { encodedId?: EncodedId },
   level = 0,
+  idToUrl?: Record<EncodedId, string>,
 ): string {
   // Compute indentation based on depth level
   const indent = "  ".repeat(level);
@@ -96,11 +98,20 @@ export function formatSimplifiedTree(
   // Prepare the formatted name segment if present
   const namePart = node.name ? `: ${cleanText(node.name)}` : "";
 
+  // Add URL if available for link/image/video elements
+  let urlPart = "";
+  if (idToUrl && node.encodedId) {
+    const url = idToUrl[node.encodedId];
+    if (url && (node.role === "link" || node.role === "image" || node.role === "video" || node.role === "Video")) {
+      urlPart = ` [url: ${url}]`;
+    }
+  }
+
   // Build current line and recurse into child nodes
-  const currentLine = `${indent}[${idLabel}] ${node.role}${namePart}\n`;
+  const currentLine = `${indent}[${idLabel}] ${node.role}${namePart}${urlPart}\n`;
   const childrenLines =
     node.children
-      ?.map((c) => formatSimplifiedTree(c as typeof node, level + 1))
+      ?.map((c) => formatSimplifiedTree(c as typeof node, level + 1, idToUrl))
       .join("") ?? "";
 
   return currentLine + childrenLines;
@@ -374,6 +385,8 @@ export async function buildHierarchicalTree(
   tagNameMap: Record<EncodedId, string>,
   logger?: (l: LogLine) => void,
   xpathMap?: Record<EncodedId, string>,
+  simplePage?: SimplePage,
+  targetFrame?: Frame,
 ): Promise<TreeResult> {
   // EncodedId → URL (only if the backend-id is unique)
   const idToUrl: Record<EncodedId, string> = {};
@@ -401,7 +414,7 @@ export async function buildHierarchicalTree(
   for (const node of nodes) {
     if (+node.nodeId < 0) continue; // skip pseudo-nodes
 
-    const url = extractUrlFromAXNode(node);
+    const url = await extractUrlFromAXNode(node, simplePage, targetFrame);
 
     const keep =
       node.name?.trim() || node.childIds?.length || isInteractive(node);
@@ -455,7 +468,7 @@ export async function buildHierarchicalTree(
   ).filter(Boolean) as AccessibilityNode[];
 
   // pretty outline for logging / LLM input
-  const simplified = cleanedRoots.map(formatSimplifiedTree).join("\n");
+  const simplified = cleanedRoots.map(node => formatSimplifiedTree(node, 0, idToUrl)).join("\n");
 
   return {
     tree: cleanedRoots,
@@ -600,6 +613,8 @@ export async function getAccessibilityTree(
       tagNameMap,
       logger,
       xpathMap,
+      simplePageBase,
+      targetFrame,
     );
 
     logger({
@@ -1264,20 +1279,70 @@ function removeRedundantStaticTextChildren(
 
 /**
  * Extract the URL string from an AccessibilityNode's properties, if present.
+ * For video elements, also attempts to extract poster and src from DOM.
  *
  * @param axNode - The AccessibilityNode to inspect for a 'url' property.
+ * @param simplePage - Optional SimplePage instance for DOM queries.
+ * @param targetFrame - Optional frame context for CDP evaluation.
  * @returns The URL string if found and valid; otherwise, undefined.
  */
-function extractUrlFromAXNode(axNode: AccessibilityNode): string | undefined {
-  // Exit early if there are no properties on this node
-  if (!axNode.properties) return undefined;
-
-  // Find a property named 'url'
-  const urlProp = axNode.properties.find((prop) => prop.name === "url");
-  // Return the trimmed URL string if the property exists and is valid
-  if (urlProp && urlProp.value && typeof urlProp.value.value === "string") {
-    return urlProp.value.value.trim();
+async function extractUrlFromAXNode(
+  axNode: AccessibilityNode,
+  simplePage?: SimplePage,
+  targetFrame?: Frame,
+): Promise<string | undefined> {
+  // Try to get URL from accessibility properties first
+  if (axNode.properties) {
+    const urlProp = axNode.properties.find((prop) => prop.name === "url");
+    if (urlProp && urlProp.value && typeof urlProp.value.value === "string") {
+      return urlProp.value.value.trim();
+    }
   }
+
+  // For video elements, try to get poster or src from DOM
+  if (
+    (axNode.role === "video" || axNode.role === "Video") &&
+    axNode.backendDOMNodeId !== undefined &&
+    simplePage
+  ) {
+    try {
+      const result = await simplePage.sendCDP<{ object: { value?: string } }>(
+        "DOM.resolveNode",
+        { backendNodeId: axNode.backendDOMNodeId },
+        targetFrame,
+      );
+
+      const objectId = (result as any).object?.objectId;
+      if (objectId) {
+        // Get both poster and src (blob URL)
+        const attrResult = await simplePage.sendCDP<{ result: { value?: any } }>(
+          "Runtime.callFunctionOn",
+          {
+            objectId,
+            functionDeclaration: `function() {
+              const poster = this.poster || '';
+              const src = this.currentSrc || this.src || '';
+              // Return poster if available, otherwise src
+              // If both exist, combine them: "poster | blob:..."
+              if (poster && src && src !== poster) {
+                return poster + ' | ' + src;
+              }
+              return poster || src;
+            }`,
+          },
+          targetFrame,
+        );
+
+        const url = attrResult?.result?.value;
+        if (url && typeof url === "string" && url.trim()) {
+          return url.trim();
+        }
+      }
+    } catch (error) {
+      // Silently fail and return undefined
+    }
+  }
+
   return undefined;
 }
 

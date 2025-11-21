@@ -18,6 +18,7 @@ import { registerCookiesCommands } from "./commands/cookies";
 import { registerExtractionCommands } from "./commands/extraction";
 import { registerJobsCommands } from "./commands/jobs";
 import { registerLogsCommands } from "./commands/logs";
+import { registerA11yCommand } from "./commands/a11y";
 
 // ============================================================================
 // Main CLI
@@ -273,6 +274,9 @@ Note:
 
   // Logs commands (log)
   registerLogsCommands(program);
+
+  // A11y command (accessibility tree)
+  registerA11yCommand(program);
 
   program.parse();
 }
