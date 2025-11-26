@@ -14,6 +14,7 @@ export async function startServer(options: {
   port?: number;
   headless?: boolean;
   cdp?: string;
+  extension?: string;
 }): Promise<void> {
   const instanceName = options.name || "default";
   const instanceManager = new InstanceManager();
@@ -163,6 +164,11 @@ export async function startServer(options: {
   // Add CDP_ENDPOINT if --cdp is provided
   if (options.cdp) {
     updatedEnv.CDP_ENDPOINT = options.cdp;
+  }
+
+  // Add EXTENSION_PATH if --extension is provided
+  if (options.extension) {
+    updatedEnv.EXTENSION_PATH = options.extension;
   }
 
   // Kill the temporary process and spawn with correct env

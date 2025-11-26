@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Remote Chrome configuration
-# 根据参数选择服务器（默认 tago）
+# 根据参数选择服务器（默认 tencent）
 if [ "$1" = "free-server" ]; then
     REMOTE_HOST="100.74.12.43"
     REMOTE_USER="root"
 else
-    # 默认连接 tago
-    REMOTE_HOST="100.91.155.104"
+    # 默认连接 tencent
+    REMOTE_HOST="100.93.198.106"
     REMOTE_USER="root"
 fi
 

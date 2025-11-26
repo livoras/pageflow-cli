@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Remote Chrome configuration
-# 根据参数选择服务器（默认 tago）
+# 根据参数选择服务器（默认 tencent）
 if [ "$1" = "ali" ]; then
     REMOTE_HOST="8.155.175.166"
     REMOTE_PORT="7070"
     REMOTE_USER="root"
 else
-    # 默认连接 tago
-    REMOTE_HOST="100.91.155.104"
+    # 默认连接 tencent
+    REMOTE_HOST="100.93.198.106"
     REMOTE_PORT="22"
     REMOTE_USER="root"
 fi

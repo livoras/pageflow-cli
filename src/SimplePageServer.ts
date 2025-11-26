@@ -316,10 +316,8 @@ export class SimplePageServer {
             "--window-size=1920,1080",
             "--start-maximized",
 
-            // Disable notifications and extensions
+            // Disable notifications
             "--disable-notifications",
-            "--disable-extensions",
-            "--disable-default-apps",
             "--disable-infobars",
             "--mute-audio",
             "--no-first-run",
@@ -337,6 +335,12 @@ export class SimplePageServer {
             // Language settings
             "--lang=zh-CN",
             "--disable-features=UserAgentClientHint",
+
+            // Load extension if specified
+            ...(process.env.EXTENSION_PATH ? [
+              `--load-extension=${process.env.EXTENSION_PATH}`,
+              `--disable-extensions-except=${process.env.EXTENSION_PATH}`,
+            ] : []),
           ],
       };
 

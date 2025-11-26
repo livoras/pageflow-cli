@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--chrome=local|free-server|tago]"
+      echo "Usage: $0 [--chrome=local|free-server|tencent]"
       exit 1
       ;;
   esac
@@ -38,13 +38,13 @@ case $CHROME_SOURCE in
     CDP_ENDPOINT="http://100.74.12.43:9222"
     echo "使用 free-server Chrome (100.74.12.43)"
     ;;
-  tago)
-    CDP_ENDPOINT="http://100.91.155.104:19222"
-    echo "使用 tago Chrome (100.91.155.104:19222)"
+  tencent)
+    CDP_ENDPOINT="http://100.93.198.106:19222"
+    echo "使用 tencent Chrome (100.93.198.106:19222)"
     ;;
   *)
     echo "错误: 未知的 Chrome 源 '$CHROME_SOURCE'"
-    echo "支持的选项: local, free-server, tago"
+    echo "支持的选项: local, free-server, tencent"
     exit 1
     ;;
 esac
@@ -78,7 +78,7 @@ echo "  Backend 构建完成"
 echo ""
 
 echo "  构建 Frontend..."
-cd simple-page-viewer
+cd viewer
 docker build --platform linux/amd64 -t pageflow-frontend:latest -t "${FRONTEND_IMAGE}" .
 cd ..
 echo "  Frontend 构建完成"

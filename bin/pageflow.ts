@@ -104,6 +104,7 @@ DOCUMENTATION
     .option("-p, --port <number>", "Server port (auto-assigned if not specified)")
     .option("--headless", "Run in headless mode (no visible browser window)")
     .option("--cdp <url>", "Connect to remote Chrome via CDP (e.g., http://localhost:9222)")
+    .option("--extension <path>", "Load unpacked Chrome extension from directory")
     .addHelpText(
       "after",
       `
@@ -140,7 +141,8 @@ Storage:
       const port = options.port ? parseInt(options.port, 10) : undefined;
       const headless = options.headless || false;
       const cdp = options.cdp;
-      await startServer({ name, port, headless, cdp });
+      const extension = options.extension;
+      await startServer({ name, port, headless, cdp, extension });
     });
 
   // Stop command
