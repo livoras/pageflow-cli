@@ -95,7 +95,8 @@ export async function showStatus(): Promise<void> {
           if (error.response?.status === 404) {
             // Instance doesn't support jobs API (old version)
           } else {
-            console.error(`- Jobs: \x1b[1;91mError: ${error.message}\x1b[0m`);
+            const serverError = error.response?.data?.error;
+            console.error(`- Jobs: \x1b[1;91mError: ${serverError || error.message}\x1b[0m`);
           }
         }
       }

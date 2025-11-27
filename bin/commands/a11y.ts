@@ -86,7 +86,8 @@ export function registerA11yCommand(program: Command): void {
             "Error: Cannot connect to pageflow server. Make sure it's running.",
           );
         } else {
-          console.error(`Error: ${error.message}`);
+          const serverError = error.response?.data?.error;
+          console.error(`Error: ${serverError || error.message}`);
         }
         process.exit(1);
       }
