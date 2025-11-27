@@ -35,10 +35,14 @@
 ### 远程服务器
 ```bash
 # 添加远程服务器
-./pageflow add-server <url> --name <name>
+pageflow add-server <url> --name <name>
+
+# 移除远程服务器（从本地注册表删除）
+pageflow stop <name>
 
 # 示例
-./pageflow add-server http://100.91.155.104:5200 --name tago
+pageflow add-server http://100.91.155.104:3100 --name tago
+pageflow stop tago  # 移除 tago 注册
 ```
 
 ### Docker 部署（推荐）

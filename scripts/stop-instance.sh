@@ -22,5 +22,9 @@ echo ""
 
 ssh $SERVER "docker stop $CONTAINER && docker rm $CONTAINER"
 
+# Remove from local registry
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+"$SCRIPT_DIR/../pageflow" stop $NAME
+
 echo ""
-echo "Done. Container $CONTAINER stopped and removed on $SERVER"
+echo "Done. Instance $NAME stopped and unregistered."

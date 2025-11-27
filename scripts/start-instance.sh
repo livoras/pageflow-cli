@@ -49,8 +49,24 @@ if [ -z "$IP" ]; then
   IP="<server-ip>"
 fi
 
+# Wait for container to start and health check
+echo "Waiting for instance to be ready..."
+for i in {1..12}; do
+  sleep 5
+  if curl -sf "http://$IP:$PORT/api/health" > /dev/null 2>&1; then
+    echo "Instance is healthy"
+    break
+  fi
+  if [ $i -eq 12 ]; then
+    echo "Error: Instance not healthy after 60s"
+    exit 1
+  fi
+  echo "  Retry $i/12..."
+done
+
+# Add to local registry
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+"$SCRIPT_DIR/../pageflow" add-server "http://$IP:$PORT" --name $NAME
+
 echo ""
-echo "Done. Container $CONTAINER started on $SERVER:$PORT"
-echo ""
-echo "Add to local registry:"
-echo "  pageflow add-server http://$IP:$PORT --name $NAME"
+echo "Done. Instance $NAME started and registered."
