@@ -19,6 +19,8 @@ import { registerExtractionCommands } from "./commands/extraction";
 import { registerJobsCommands } from "./commands/jobs";
 import { registerLogsCommands } from "./commands/logs";
 import { registerA11yCommand } from "./commands/a11y";
+import { registerRunCommand } from "./commands/run";
+import { registerShadowCommand } from "./commands/shadow";
 
 // ============================================================================
 // Main CLI
@@ -279,6 +281,12 @@ Note:
 
   // A11y command (accessibility tree)
   registerA11yCommand(program);
+
+  // Run command (script execution)
+  registerRunCommand(program);
+
+  // Shadow command (cookie sync browser)
+  registerShadowCommand(program);
 
   program.parse();
 }

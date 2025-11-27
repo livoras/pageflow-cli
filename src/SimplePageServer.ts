@@ -14,6 +14,7 @@ import { ExtractionRoutes } from "./routes/ExtractionRoutes";
 import { JobRoutes } from "./routes/JobRoutes";
 import { LogRoutes } from "./routes/LogRoutes";
 import { A11yRoutes } from "./routes/A11yRoutes";
+import { ScriptRunnerRoutes } from "./routes/ScriptRunnerRoutes";
 import { ServerService } from "./services/ServerService";
 import { JobManager } from "./jobs/JobManager";
 
@@ -88,6 +89,12 @@ export class SimplePageServer {
     );
     this.routeRegistry.addHandler(
       new A11yRoutes(
+        this.stateManager,
+        this.pageServiceInstance,
+      ),
+    );
+    this.routeRegistry.addHandler(
+      new ScriptRunnerRoutes(
         this.stateManager,
         this.pageServiceInstance,
       ),
@@ -300,7 +307,6 @@ export class SimplePageServer {
 
       // Use Google Chrome instead of Chromium
       const launchOptions: any = {
-        channel: 'chrome', // Use system Google Chrome
         headless: this.headless,
         args: [
             // Anti-automation detection
@@ -312,6 +318,7 @@ export class SimplePageServer {
             "--disable-dev-shm-usage",
             "--no-sandbox",
             "--disable-setuid-sandbox",
+            "--disable-gpu",
             "--disable-features=IsolateOrigins,site-per-process",
             "--window-size=1920,1080",
             "--start-maximized",
