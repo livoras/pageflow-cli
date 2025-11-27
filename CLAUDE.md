@@ -47,12 +47,21 @@
 # 构建并推送镜像
 cd scripts/docker/pageflow-client && ./build.sh
 
-# 服务器部署
+# 服务器部署（单实例）
 docker pull crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
 docker run -d --name pageflow-client -p 3100:3100 --restart unless-stopped \
+  -v /root/.pageflow:/root/.pageflow \
+  crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
+
+# 同一服务器多实例（需要独立目录避免 profile 锁冲突）
+docker run -d --name pageflow-tago -p 3100:3100 --restart unless-stopped \
+  -v /root/.pageflow-tago:/root/.pageflow \
+  crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
+docker run -d --name pageflow-tago2 -p 3101:3100 --restart unless-stopped \
+  -v /root/.pageflow-tago2:/root/.pageflow \
   crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
 ```
-Docker 镜像内置 Xvfb，无需额外配置 DISPLAY
+Docker 镜像内置 Xvfb，无需额外配置 DISPLAY。必须挂载宿主目录以持久化 cookies 和用户数据
 
 ## 数据提取
 
