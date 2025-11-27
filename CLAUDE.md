@@ -32,40 +32,27 @@
 ./pageflow status
 ```
 
-### 远程服务器
+### 远程实例管理
 ```bash
-# 添加远程服务器
-pageflow add-server <url> --name <name>
+# 启动远程浏览器实例（自动注册到本地）
+./scripts/pagestart <server> <name> <port>
+./scripts/pagestart tago tago2 3101
 
-# 移除远程服务器（从本地注册表删除）
-pageflow stop <name>
+# 查看服务器上的实例
+./scripts/pagestart <server> --list
 
-# 示例
-pageflow add-server http://100.91.155.104:3100 --name tago
-pageflow stop tago  # 移除 tago 注册
+# 停止远程实例（自动取消注册）
+./scripts/pagestop <server> <name>
+./scripts/pagestop tago tago2
+
+# 启动 dispatch server（负载均衡转发到多实例）
+./scripts/pagerun start <server> name1,name2
+./scripts/pagerun start free-server tago,tago2
+
+# 停止 dispatch server
+./scripts/pagerun stop <server>
 ```
-
-### Docker 部署（推荐）
-远程服务器使用 Docker 部署 pageflow-client：
-```bash
-# 构建并推送镜像
-cd scripts/docker/pageflow-client && ./build.sh
-
-# 服务器部署（单实例）
-docker pull crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
-docker run -d --name pageflow-client -p 3100:3100 --restart unless-stopped \
-  -v /root/.pageflow:/root/.pageflow \
-  crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
-
-# 同一服务器多实例（需要独立目录避免 profile 锁冲突）
-docker run -d --name pageflow-tago -p 3100:3100 --restart unless-stopped \
-  -v /root/.pageflow-tago:/root/.pageflow \
-  crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
-docker run -d --name pageflow-tago2 -p 3101:3100 --restart unless-stopped \
-  -v /root/.pageflow-tago2:/root/.pageflow \
-  crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
-```
-Docker 镜像内置 Xvfb，无需额外配置 DISPLAY。必须挂载宿主目录以持久化 cookies 和用户数据
+pagestart/pagestop 管理单个浏览器实例，pagerun 管理 dispatch 负载均衡服务
 
 ## 数据提取
 
@@ -156,7 +143,7 @@ Docker 镜像内置 Xvfb，无需额外配置 DISPLAY。必须挂载宿主目录
 - 如果发现自己在手动设置环境变量、删除锁文件、直接调用内部脚本 —— 停下来，问：我是不是走错路了？
 - 目标是"正确"，不是"能跑"
 
-**案例**：启动远程实例应该用 `ssh tago "pageflow start tago2 --port 3101"`，而不是手动拼环境变量调用 `node start-server.js`。后者导致 INSTANCE_NAME 缺失，造成 jobs 跨实例污染。
+**案例**：启动远程实例应该用 `./scripts/pagestart tago tago2 3101`，而不是手动 SSH 去服务器执行 docker 命令。脚本会自动处理健康检查和本地注册。
 
 ## 开发规则
 

@@ -1,0 +1,91 @@
+#!/bin/bash
+
+# Usage: ./scripts/pagerun start <server> name1,name2
+#        ./scripts/pagerun stop <server>
+# Example: ./scripts/pagerun start free tago,tago2,tencent
+
+set -e
+
+ACTION=$1
+SERVER=$2
+NAMES=$3
+
+INSTANCES_FILE="$HOME/.pageflow/instances.json"
+IMAGE="crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest"
+CONTAINER="pageflow-dispatch"
+PORT=4001
+
+case $ACTION in
+  start)
+    if [ -z "$SERVER" ] || [ -z "$NAMES" ]; then
+      echo "Usage: $0 start <server> name1,name2"
+      echo "Example: $0 start free tago,tago2,tencent"
+      exit 1
+    fi
+
+    # Build add-server commands from local instances.json
+    ADD_CMDS=""
+    IFS=',' read -ra NAME_ARRAY <<< "$NAMES"
+    for name in "${NAME_ARRAY[@]}"; do
+      url=$(jq -r ".\"$name\".url" "$INSTANCES_FILE")
+      if [ -z "$url" ] || [ "$url" = "null" ]; then
+        echo "Error: Instance '$name' not found in local registry"
+        exit 1
+      fi
+      ADD_CMDS="$ADD_CMDS pageflow add-server $url --name $name &&"
+    done
+
+    # Build startup command: add servers then start dispatch
+    STARTUP_CMD="${ADD_CMDS} exec pageflow run serve --port 3100"
+
+    echo "Starting dispatch server on $SERVER..."
+    echo "  Instances: $NAMES"
+    echo "  Port: $PORT"
+    echo ""
+
+    ssh $SERVER "docker run -d --name $CONTAINER -p $PORT:3100 --restart unless-stopped $IMAGE /bin/bash -c '$STARTUP_CMD'"
+
+    # Get Tailscale IP
+    IP=$(ssh $SERVER "tailscale ip -4" 2>/dev/null || echo "")
+    if [ -z "$IP" ]; then
+      IP="<server-ip>"
+    fi
+
+    # Health check
+    echo "Waiting for dispatch server..."
+    for i in {1..12}; do
+      sleep 5
+      if curl -sf "http://$IP:$PORT/api/health" > /dev/null 2>&1; then
+        echo "Dispatch server is healthy"
+        break
+      fi
+      if [ $i -eq 12 ]; then
+        echo "Error: Dispatch server not healthy after 60s"
+        exit 1
+      fi
+      echo "  Retry $i/12..."
+    done
+
+    echo ""
+    echo "Done. Dispatch server started at http://$IP:$PORT"
+    ;;
+
+  stop)
+    if [ -z "$SERVER" ]; then
+      echo "Usage: $0 stop <server>"
+      exit 1
+    fi
+
+    echo "Stopping dispatch server on $SERVER..."
+    ssh $SERVER "docker stop $CONTAINER && docker rm $CONTAINER"
+    echo "Done."
+    ;;
+
+  *)
+    echo "Usage: $0 start <server> name1,name2"
+    echo "       $0 stop <server>"
+    echo ""
+    echo "Example: $0 start free tago,tago2,tencent"
+    exit 1
+    ;;
+esac
