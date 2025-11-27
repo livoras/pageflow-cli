@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 部署 Docker 镜像到生产服务器
-# 流程: 构建 -> 推送到阿里云 -> 服务器拉取并启动
+# 部署配置到生产服务器并启动容器
+# 流程: 生成配置 -> 同步到服务器 -> 启动容器
 
 set -e
 
@@ -50,10 +50,6 @@ case $CHROME_SOURCE in
 esac
 
 # 配置
-REGISTRY="crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com"
-NAMESPACE="face-match"
-BACKEND_IMAGE="${REGISTRY}/${NAMESPACE}/pageflow-backend:latest"
-FRONTEND_IMAGE="${REGISTRY}/${NAMESPACE}/pageflow-frontend:latest"
 SERVER="root@8.155.175.166"
 SERVER_PORT="7070"
 DEPLOY_PATH="/root/git/pageflow"
@@ -68,38 +64,8 @@ echo "🎯 目标服务器: ${SERVER}:${SERVER_PORT}"
 echo "🌐 Chrome CDP: $CDP_ENDPOINT"
 echo ""
 
-# 步骤 1: 构建镜像
-echo "📦 步骤 1/4: 构建 Docker 镜像..."
-echo ""
-
-echo "  构建 Backend..."
-docker build --platform linux/amd64 -t pageflow-backend:latest -t "${BACKEND_IMAGE}" .
-echo "  Backend 构建完成"
-echo ""
-
-echo "  构建 Frontend..."
-cd viewer
-docker build --platform linux/amd64 -t pageflow-frontend:latest -t "${FRONTEND_IMAGE}" .
-cd ..
-echo "  Frontend 构建完成"
-echo ""
-
-# 步骤 2: 推送到阿里云
-echo "📤 步骤 2/4: 推送镜像到阿里云..."
-echo ""
-
-echo "  推送 Backend..."
-docker push "${BACKEND_IMAGE}"
-echo "  Backend 推送完成"
-echo ""
-
-echo "  推送 Frontend..."
-docker push "${FRONTEND_IMAGE}"
-echo "  Frontend 推送完成"
-echo ""
-
-# 步骤 3: 同步配置文件到服务器
-echo "📋 步骤 3/4: 同步配置文件到服务器..."
+# 步骤 1: 同步配置文件到服务器
+echo "📋 步骤 1/2: 同步配置文件到服务器..."
 echo ""
 
 # 创建临时目录
@@ -123,15 +89,12 @@ rm -rf "${TEMP_DIR}"
 echo "  配置文件同步完成"
 echo ""
 
-# 步骤 4: 在服务器上部署
-echo "🔄 步骤 4/4: 在服务器上部署..."
+# 步骤 2: 在服务器上启动容器
+echo "🔄 步骤 2/2: 在服务器上启动容器..."
 echo ""
 
 ssh -p "${SERVER_PORT}" "${SERVER}" << 'ENDSSH'
 cd /root/git/pageflow
-
-echo "  拉取最新镜像..."
-docker compose pull
 
 echo "  停止旧容器..."
 docker compose down 2>/dev/null || true
