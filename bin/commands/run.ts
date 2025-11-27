@@ -15,6 +15,7 @@ export function registerRunCommand(program: Command): void {
     .description("Execute a script on a webpage")
     .option("--use <name>", "Use specific named instance")
     .option("--random", "Randomly select a running instance")
+    .option("--round", "Round-robin select instances")
     .option("--timeout <ms>", "Script execution timeout in milliseconds", "60000")
     .addHelpText(
       "after",
@@ -29,6 +30,8 @@ Description:
 
 Options:
   --use <name>          Use specific instance (default: "default")
+  --random              Randomly select a running instance
+  --round               Round-robin select instances (cycles through all)
   --timeout <ms>        Script execution timeout (default: 60000)
 
 Examples:
@@ -50,6 +53,9 @@ Examples:
   # Random instance selection
   $ pageflow run exec --random "https://example.com" "async (page) => await page.title()"
 
+  # Round-robin instance selection
+  $ pageflow run exec --round "https://example.com" "async (page) => await page.title()"
+
 `,
     )
     .action(async (url, script, options) => {
@@ -65,6 +71,7 @@ Examples:
     .argument("[script]", "Script to execute")
     .option("--use <name>", "Use specific named instance")
     .option("--random", "Randomly select a running instance")
+    .option("--round", "Round-robin select instances")
     .option("--timeout <ms>", "Script execution timeout in milliseconds", "60000")
     .action(async (url, script, options) => {
       if (url && script && !["exec", "serve"].includes(url)) {

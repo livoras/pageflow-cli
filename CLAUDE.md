@@ -41,13 +41,18 @@
 ./pageflow add-server http://100.91.155.104:5200 --name tago
 ```
 
-### 远程服务器 Xvfb 配置
-无 X Server 的服务器需要配置 DISPLAY 环境变量：
+### Docker 部署（推荐）
+远程服务器使用 Docker 部署 pageflow-client：
 ```bash
-# 在 ~/.bash_profile 添加
-export DISPLAY=:99
+# 构建并推送镜像
+cd scripts/docker/pageflow-client && ./build.sh
+
+# 服务器部署
+docker pull crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
+docker run -d --name pageflow-client -p 3100:3100 --restart unless-stopped \
+  crpi-vxng4q8jdjplcz7n.cn-shenzhen.personal.cr.aliyuncs.com/face-match/pageflow-client:latest
 ```
-确保 Xvfb 已运行在 :99 display，pageflow 会自动使用
+Docker 镜像内置 Xvfb，无需额外配置 DISPLAY
 
 ## 数据提取
 
@@ -146,6 +151,7 @@ export DISPLAY=:99
 - 不用内联样式、不创建新文件、不用Tailwind类名
 - 不要使用 emoji
 - 修改 `src/` 代码后，需要重启对应的本地实例才能生效
+- **禁止使用 headless 模式**：服务器和本地都不允许用 `--headless` 启动 `pageflow start`
 
 ## 测试规则
 

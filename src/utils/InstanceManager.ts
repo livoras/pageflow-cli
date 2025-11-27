@@ -214,4 +214,26 @@ export class InstanceManager {
     if (running.length === 0) return null;
     return running[Math.floor(Math.random() * running.length)];
   }
+
+  getRoundRobinInstance(): InstanceConfig | null {
+    const running = this.getRunningInstances();
+    if (running.length === 0) return null;
+
+    const stateFile = path.join(this.baseDir, "round-robin.json");
+    let lastIndex = -1;
+
+    if (fs.existsSync(stateFile)) {
+      try {
+        const state = JSON.parse(fs.readFileSync(stateFile, "utf-8"));
+        lastIndex = state.lastIndex ?? -1;
+      } catch {
+        lastIndex = -1;
+      }
+    }
+
+    const nextIndex = (lastIndex + 1) % running.length;
+    fs.writeFileSync(stateFile, JSON.stringify({ lastIndex: nextIndex }));
+
+    return running[nextIndex];
+  }
 }

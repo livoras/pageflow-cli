@@ -10,6 +10,7 @@ export class InstanceSelector {
   async select(options: {
     use?: string;
     random?: boolean;
+    round?: boolean;
   }): Promise<{ endpoint: string; instanceName?: string }> {
     if (options.use) {
       const instance = this.instanceManager.getInstance(options.use);
@@ -37,6 +38,17 @@ export class InstanceSelector {
       }
       const endpoint = this.instanceManager.getInstanceUrl(instance);
       console.error(`Randomly selected instance: ${instance.name}`);
+      return { endpoint, instanceName: instance.name };
+    }
+
+    if (options.round) {
+      const instance = this.instanceManager.getRoundRobinInstance();
+      if (!instance) {
+        console.error("Error: No running instances");
+        process.exit(1);
+      }
+      const endpoint = this.instanceManager.getInstanceUrl(instance);
+      console.error(`Round-robin selected instance: ${instance.name}`);
       return { endpoint, instanceName: instance.name };
     }
 
