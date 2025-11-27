@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Usage: ./scripts/start-instance.sh <server> <name> <port>
-#        ./scripts/start-instance.sh <server> --list
-# Example: ./scripts/start-instance.sh tago tago2 3101
+# Usage: ./scripts/pagestart <server> <name> <port>
+#        ./scripts/pagestart <server> --list
+# Example: ./scripts/pagestart tago tago2 3101
 
 set -e
 

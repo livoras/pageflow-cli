@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Usage: ./scripts/stop-instance.sh <server> <name>
-# Example: ./scripts/stop-instance.sh tago tago2
+# Usage: ./scripts/pagestop <server> <name>
+# Example: ./scripts/pagestop tago tago2
 
 set -e
 
