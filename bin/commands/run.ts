@@ -7,7 +7,8 @@ export function registerRunCommand(program: Command): void {
   program
     .command("run <url> <script>")
     .description("Execute a script on a webpage")
-    .option("--use <name>", "Use specific named instance", "default")
+    .option("--use <name>", "Use specific named instance")
+    .option("--random", "Randomly select a running instance")
     .option("--timeout <ms>", "Script execution timeout in milliseconds", "60000")
     .addHelpText(
       "after",
@@ -46,8 +47,8 @@ Examples:
       const instanceManager = new InstanceManager();
 
       // Instance selection
-      const selector = new InstanceSelector(instanceManager, "http://100.74.12.43:8006");
-      const selectedInstance = await selector.select({ use: options.use });
+      const selector = new InstanceSelector(instanceManager);
+      const selectedInstance = await selector.select(options);
       const apiEndpoint = selectedInstance.endpoint;
 
       const timeout = parseInt(options.timeout, 10);
