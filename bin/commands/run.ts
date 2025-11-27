@@ -69,7 +69,13 @@ Examples:
 
         if (response.data.success) {
           console.error("Script executed successfully");
-          console.log(JSON.stringify(response.data, null, 2));
+          const result = {
+            ...response.data,
+            instance: selectedInstance.instanceName,
+            endpoint: apiEndpoint,
+            url,
+          };
+          console.log(JSON.stringify(result, null, 2));
         } else {
           console.error(`Error: ${response.data.error}`);
           process.exit(1);
