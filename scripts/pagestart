@@ -41,6 +41,15 @@ echo "  Port: $PORT"
 echo "  Volume: $VOLUME"
 echo ""
 
+# Pull latest image
+echo "Pulling latest image..."
+ssh $SERVER "docker pull $IMAGE"
+echo ""
+
+# Clean up stale Chrome lock files from previous runs
+HOST_VOLUME_PATH=$(echo $VOLUME | cut -d: -f1)
+ssh $SERVER "rm -f $HOST_VOLUME_PATH/default/user-data/Singleton* 2>/dev/null || true"
+
 ssh $SERVER "docker run -d --name $CONTAINER -p $PORT:3100 --restart unless-stopped -v $VOLUME $IMAGE"
 
 # Get Tailscale IP

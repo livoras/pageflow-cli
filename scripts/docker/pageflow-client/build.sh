@@ -17,11 +17,17 @@ FULL_IMAGE="${REGISTRY}/${NAMESPACE}/${IMAGE_NAME}:${TAG}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# 从 package.json 获取 pageflow-cli 版本号
+PAGEFLOW_VERSION=$(node -p "require('../../../package.json').version")
+
 echo "构建镜像: ${FULL_IMAGE}"
+echo "pageflow-cli 版本: ${PAGEFLOW_VERSION}"
 echo ""
 
-# 构建多架构镜像并推送
-docker buildx build --platform linux/amd64,linux/arm64 -t ${FULL_IMAGE} --push .
+# 构建多架构镜像并推送（版本号变化时会使 npm install 层失效）
+docker buildx build --platform linux/amd64,linux/arm64 \
+  --build-arg PAGEFLOW_VERSION=${PAGEFLOW_VERSION} \
+  -t ${FULL_IMAGE} --push .
 
 echo ""
 echo "完成！镜像已推送到: ${FULL_IMAGE}"
