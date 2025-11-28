@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Usage: ./scripts/a11y <url> [-o file]
+# Example: ./scripts/a11y https://www.baidu.com
+#          ./scripts/a11y https://www.baidu.com -o output.txt
+
+set -e
+
+DISPATCHER="http://100.74.12.43:4001"
+URL=""
+OUTPUT=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -o)
+      OUTPUT="$2"
+      shift 2
+      ;;
+    *)
+      URL="$1"
+      shift
+      ;;
+  esac
+done
+
+if [ -z "$URL" ]; then
+  echo "Usage: $0 <url> [-o file]"
+  echo "Example: $0 https://www.baidu.com"
+  echo "         $0 https://www.baidu.com -o output.txt"
+  exit 1
+fi
+
+RESULT=$(curl -s -X POST "$DISPATCHER/api/a11y" \
+  -H "Content-Type: application/json" \
+  -d "{\"url\":\"$URL\"}" | jq -r '.tree')
+
+if [ -n "$OUTPUT" ]; then
+  echo "$RESULT" > "$OUTPUT"
+  echo "Saved to $OUTPUT"
+else
+  echo "$RESULT"
+fi
