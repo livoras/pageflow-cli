@@ -21,7 +21,7 @@ export function registerRunServeCommand(program: Command): void {
       "after",
       `
 Description:
-  Starts a local HTTP server that dispatches /api/run requests
+  Starts a local HTTP server that dispatches requests
   to multiple pageflow instances with load balancing.
 
 Options:
@@ -29,14 +29,14 @@ Options:
   -i, --instances <names>       Instance names, comma-separated (default: all)
   --health-interval <seconds>   Health check interval (default: 30)
 
-Request Format:
-  POST /api/run
-  {
-    "url": "https://example.com",
-    "script": "async (page) => await page.title()",
-    "timeout": 60000,
-    "type": "round"  // default, or "random" for random selection
-  }
+Endpoints:
+  POST /api/run   - Dispatch script execution
+  POST /api/a11y  - Dispatch accessibility tree request
+  GET  /api/health - Check dispatch server status
+
+Request Format (type: "round" or "random"):
+  POST /api/run   { url, script, timeout?, type? }
+  POST /api/a11y  { url, selector?, timeout?, type? }
 
 Examples:
   # Start dispatch server on default port with all instances
@@ -165,6 +165,47 @@ Examples:
         }
       };
 
+      // Generic forward request function
+      const forwardRequest = async (
+        apiPath: string,
+        body: Record<string, any>,
+        type: string = "round",
+        timeout: number = 60000
+      ) => {
+        const instance = selectInstance(type);
+        if (!instance) {
+          return { status: 503, error: "No healthy instances available" };
+        }
+
+        try {
+          const response = await axios.post(
+            `${instance.endpoint}${apiPath}`,
+            body,
+            {
+              headers: { "Content-Type": "application/json" },
+              timeout: timeout + 10000,
+            }
+          );
+
+          return {
+            status: 200,
+            data: {
+              ...response.data,
+              instance: instance.name,
+              endpoint: instance.endpoint,
+              dispatchType: type,
+            },
+          };
+        } catch (error: any) {
+          const errMsg = error.response?.data?.error || error.message;
+          return {
+            status: error.response?.status || 500,
+            error: errMsg,
+            instance: instance.name,
+          };
+        }
+      };
+
       // Create Express app
       const app = express();
       app.use(express.json());
@@ -195,37 +236,28 @@ Examples:
           return;
         }
 
-        const instance = selectInstance(type);
-        if (!instance) {
-          res.status(503).json({ success: false, error: "No healthy instances available" });
+        const result = await forwardRequest("/api/run", { url, script, timeout }, type, timeout);
+        if (result.error) {
+          res.status(result.status).json({ success: false, error: result.error, instance: result.instance });
+        } else {
+          res.json(result.data);
+        }
+      });
+
+      // A11y dispatch endpoint
+      app.post("/api/a11y", async (req, res) => {
+        const { url, selector, timeout = 10000, type = "round" } = req.body;
+
+        if (!url) {
+          res.status(400).json({ success: false, error: "Missing url" });
           return;
         }
 
-        try {
-          const response = await axios.post(
-            `${instance.endpoint}/api/run`,
-            { url, script, timeout },
-            {
-              headers: { "Content-Type": "application/json" },
-              timeout: timeout + 10000,
-            }
-          );
-
-          const result = {
-            ...response.data,
-            instance: instance.name,
-            endpoint: instance.endpoint,
-            dispatchType: type,
-          };
-
-          res.json(result);
-        } catch (error: any) {
-          const errMsg = error.response?.data?.error || error.message;
-          res.status(error.response?.status || 500).json({
-            success: false,
-            error: errMsg,
-            instance: instance.name,
-          });
+        const result = await forwardRequest("/api/a11y", { url, selector, timeout }, type, timeout);
+        if (result.error) {
+          res.status(result.status).json({ success: false, error: result.error, instance: result.instance });
+        } else {
+          res.json(result.data);
         }
       });
 
@@ -238,6 +270,7 @@ Examples:
         console.log("");
         console.log("Endpoints:");
         console.log(`  POST /api/run    - Dispatch script execution`);
+        console.log(`  POST /api/a11y   - Dispatch accessibility tree request`);
         console.log(`  GET  /api/health - Check dispatch server status`);
         console.log("");
       });
