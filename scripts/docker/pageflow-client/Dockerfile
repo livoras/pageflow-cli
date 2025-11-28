@@ -20,12 +20,13 @@ RUN apt-get update && apt-get install -y \
     fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pageflow-cli (skip postinstall to avoid slow chromium download in QEMU)
+# Install pageflow-cli and Playwright browsers with cache mounts
+# Cache mounts persist across builds, avoiding re-download when only version changes
 ARG PAGEFLOW_VERSION=latest
-RUN npm install -g --ignore-scripts pageflow-cli@${PAGEFLOW_VERSION}
-
-# Install Playwright browsers
-RUN npx playwright install chromium
+RUN --mount=type=cache,target=/root/.npm \
+    --mount=type=cache,target=/root/.cache/ms-playwright \
+    npm install -g --ignore-scripts pageflow-cli@${PAGEFLOW_VERSION} && \
+    npx playwright install chromium
 
 EXPOSE 3100
 
