@@ -46,6 +46,11 @@ case $ACTION in
     # Stop existing container if any
     ssh $SERVER "docker rm -f $CONTAINER 2>/dev/null || true"
 
+    # Pull latest image
+    echo "Pulling latest image..."
+    ssh $SERVER "docker pull $IMAGE"
+    echo ""
+
     ssh $SERVER "docker run -d --name $CONTAINER -p $PORT:3100 --restart unless-stopped $IMAGE /bin/bash -c '$STARTUP_CMD'"
 
     # Get Tailscale IP
