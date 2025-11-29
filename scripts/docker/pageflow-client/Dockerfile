@@ -31,4 +31,4 @@ RUN --mount=type=cache,target=/root/.npm \
 EXPOSE 3100
 
 # Start Xvfb and pageflow (keep container running)
-CMD Xvfb :99 -screen 0 1920x1080x24 & sleep 1 && DISPLAY=:99 pageflow start && sleep infinity
+CMD rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 && Xvfb :99 -screen 0 1920x1080x24 & sleep 1 && DISPLAY=:99 pageflow start && sleep infinity

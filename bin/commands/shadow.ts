@@ -134,7 +134,8 @@ Examples:
 
           return cookies.length;
         } catch (error: any) {
-          console.error(`[Sync Error] ${error.message}`);
+          const detail = error.response?.data?.error || error.message;
+          console.error(`[Sync Error] ${detail}`);
           return -1;
         }
       };
