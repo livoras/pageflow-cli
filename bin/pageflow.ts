@@ -292,6 +292,6 @@ Note:
 }
 
 main().catch((error) => {
-  console.error("Unhandled error:", error.message);
+  console.error("Unhandled error:", error.stack || error.message || error);
   process.exit(1);
 });

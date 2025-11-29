@@ -336,6 +336,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("未处理的错误:", error.message);
+  console.error("未处理的错误:", error.stack || error.message || error);
   process.exit(1);
 });
