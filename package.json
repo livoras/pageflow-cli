@@ -1,6 +1,6 @@
 {
   "name": "pageflow-cli",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "description": "Pageflow CLI - Browser automation and web scraping tool with multi-instance support",
   "main": "./dist/src/index.js",
   "module": "./dist/src/index.js",
